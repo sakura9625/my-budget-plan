@@ -9,6 +9,8 @@ workflows:
       ios_signing:
         provisioning_profiles:
           - MyBudgetPlan_AppStore
+        certificates:
+          - Diving Prep App
     scripts:
       - name: Set up Flutter
         script: |
