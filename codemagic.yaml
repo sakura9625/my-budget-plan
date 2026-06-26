@@ -9,6 +9,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.sakura9625.mybudgetplan
+        provisioning_profiles:
+          - MyBudgetPlan_AppStore
     scripts:
       - name: Set up Flutter
         script: |
