@@ -1,14 +1,14 @@
 import 'package:hive/hive.dart';
 
-part 'funding_entry.g.dart';
+part 'budget_entry.g.dart';
 
-@HiveType(typeId: 3)
-class FundingEntry extends HiveObject {
+@HiveType(typeId: 5)
+class BudgetEntry extends HiveObject {
   @HiveField(0)
   String id;
 
   @HiveField(1)
-  String projectId;
+  String budgetId;
 
   @HiveField(2)
   double amount;
@@ -19,9 +19,9 @@ class FundingEntry extends HiveObject {
   @HiveField(4)
   String? memo;
 
-  FundingEntry({
+  BudgetEntry({
     required this.id,
-    required this.projectId,
+    required this.budgetId,
     required this.amount,
     required this.date,
     this.memo,

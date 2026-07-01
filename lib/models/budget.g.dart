@@ -1,55 +1,61 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'monthly_review.dart';
+part of 'budget.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class MonthlyReviewAdapter extends TypeAdapter<MonthlyReview> {
+class BudgetAdapter extends TypeAdapter<Budget> {
   @override
-  final int typeId = 4;
+  final int typeId = 3;
 
   @override
-  MonthlyReview read(BinaryReader reader) {
+  Budget read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return MonthlyReview(
+    return Budget(
       id: fields[0] as String,
-      year: fields[1] as int,
-      month: fields[2] as int,
-      totalAssets: fields[3] as double,
-      cashAmount: fields[4] as double,
-      prevTotalAssets: fields[5] as double?,
-      prevCashAmount: fields[6] as double?,
-      comment: fields[7] as String?,
-      createdAt: fields[8] as DateTime,
+      name: fields[1] as String,
+      monthlyAmount: fields[2] as double,
+      startYear: fields[3] as int,
+      startMonth: fields[4] as int,
+      endYear: fields[5] as int,
+      endMonth: fields[6] as int,
+      usedAmount: fields[7] as double,
+      emoji: fields[8] as String?,
+      memo: fields[9] as String?,
+      createdAt: fields[10] as DateTime,
     );
   }
 
   @override
-  void write(BinaryWriter writer, MonthlyReview obj) {
+  void write(BinaryWriter writer, Budget obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.year)
+      ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.month)
+      ..write(obj.monthlyAmount)
       ..writeByte(3)
-      ..write(obj.totalAssets)
+      ..write(obj.startYear)
       ..writeByte(4)
-      ..write(obj.cashAmount)
+      ..write(obj.startMonth)
       ..writeByte(5)
-      ..write(obj.prevTotalAssets)
+      ..write(obj.endYear)
       ..writeByte(6)
-      ..write(obj.prevCashAmount)
+      ..write(obj.endMonth)
       ..writeByte(7)
-      ..write(obj.comment)
+      ..write(obj.usedAmount)
       ..writeByte(8)
+      ..write(obj.emoji)
+      ..writeByte(9)
+      ..write(obj.memo)
+      ..writeByte(10)
       ..write(obj.createdAt);
   }
 
@@ -59,7 +65,7 @@ class MonthlyReviewAdapter extends TypeAdapter<MonthlyReview> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MonthlyReviewAdapter &&
+      other is BudgetAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
