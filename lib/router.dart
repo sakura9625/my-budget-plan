@@ -1,29 +1,31 @@
-// 一時的に空のルーターにする
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/app_settings.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/setup_screen.dart';
+import 'screens/main_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final settingsBox = Hive.box<AppSettings>('settings');
+  final settings = settingsBox.isNotEmpty ? settingsBox.getAt(0) : null;
+  final isSetupDone = settings?.initialSetupCompleted ?? false;
+
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: isSetupDone ? '/main' : '/onboarding',
     routes: [
       GoRoute(
-        path: '/home',
-        builder: (context, state) => const _PlaceholderScreen(title: 'ホーム'),
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/setup',
+        builder: (context, state) => const SetupScreen(),
+      ),
+      GoRoute(
+        path: '/main',
+        builder: (context, state) => const MainScreen(),
       ),
     ],
   );
 });
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const _PlaceholderScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title 準備中')),
-    );
-  }
-}

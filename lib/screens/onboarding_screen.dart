@@ -1,0 +1,392 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../theme.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _pageController = PageController();
+  int _currentPage = 0;
+
+  final _pages = const [
+    _Page1(),
+    _Page2(),
+    _Page3(),
+    _Page4(),
+    _Page5(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                children: _pages,
+              ),
+            ),
+            _buildIndicator(),
+            _buildButton(),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(_pages.length, (i) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: _currentPage == i ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: _currentPage == i ? AppTheme.primary : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildButton() {
+    final isLast = _currentPage == _pages.length - 1;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      child: ElevatedButton(
+        onPressed: () {
+          if (isLast) {
+            context.go('/setup');
+          } else {
+            _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        },
+        child: Text(isLast ? '年間予算を作る' : '次へ'),
+      ),
+    );
+  }
+}
+
+class _Page1 extends StatelessWidget {
+  const _Page1();
+
+  @override
+  Widget build(BuildContext context) {
+    return _OnboardingPage(
+      emoji: '😔',
+      title: 'お金のこと、こんなふうに\n思ったことはありませんか？',
+      body: 'もっと貯金したい。\n趣味にもお金を使いたい。\n今月あといくら使っていいか分からない。\n\nでも、家計簿は続かない。',
+      supplement: 'このアプリは、毎月1回・3つの入力だけで、\nあなたのお金の計画をサポートします。',
+    );
+  }
+}
+
+class _Page2 extends StatelessWidget {
+  const _Page2();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Text('お金ではなく、\n未来を管理します',
+              style: Theme.of(context).textTheme.displayLarge),
+          const SizedBox(height: 16),
+          Text(
+            '旅行、カメラ、貯蓄、推し活。\nお金を目的ごとに整理すると、\n「何に使っていいか」が見えるようになります。',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textDark.withOpacity(0.7),
+                  height: 1.8,
+                ),
+          ),
+          const SizedBox(height: 32),
+          _buildDiagram(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiagram(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _diagramItem(context, '年間自由資金', AppTheme.primary, isTop: true),
+          const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          Row(
+            children: [
+              Expanded(child: _diagramItem(context, '貯蓄', AppTheme.success)),
+              const SizedBox(width: 8),
+              Expanded(child: _diagramItem(context, 'プロジェクト', AppTheme.primary)),
+              const SizedBox(width: 8),
+              Expanded(child: _diagramItem(context, '予算', AppTheme.accent)),
+              const SizedBox(width: 8),
+              Expanded(child: _diagramItem(context, '自由枠', Colors.grey)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _diagramItem(BuildContext context, String label, Color color,
+      {bool isTop = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: isTop ? 14 : 11,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+class _Page3 extends StatelessWidget {
+  const _Page3();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Text('今月、あといくら使えるか\nが分かります',
+              style: Theme.of(context).textTheme.displayLarge),
+          const SizedBox(height: 16),
+          Text(
+            '今月は余裕があるのか。\n少し自粛した方がいいのか。\nホームを見れば、すぐに分かります。',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textDark.withOpacity(0.7),
+                  height: 1.8,
+                ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('今月は安心して使えます。',
+                    style: TextStyle(
+                        color: AppTheme.success,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
+                const Divider(height: 24),
+                _homeItem(context, '今月の自由枠', '82,000円', '余裕あり', AppTheme.success),
+                const SizedBox(height: 12),
+                _homeItem(context, '旅行', '順調', '60%', AppTheme.primary),
+                const SizedBox(height: 12),
+                _homeItem(context, '推し活', '余裕あり', '32%', AppTheme.success),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _homeItem(BuildContext context, String label, String value,
+      String sub, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(value,
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: 14)),
+            Text(sub,
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _Page4 extends StatelessWidget {
+  const _Page4();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Text('毎月1回、\nざっくりで大丈夫',
+              style: Theme.of(context).textTheme.displayLarge),
+          const SizedBox(height: 16),
+          Text(
+            '細かな家計簿は不要です。\n入力するのは、月に1回だけ。\n入力を忘れた月があっても、\n次回レビューで計画を調整できます。',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textDark.withOpacity(0.7),
+                  height: 1.8,
+                ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('毎月の入力はこれだけ',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(color: AppTheme.primary)),
+                const SizedBox(height: 16),
+                _inputItem(context, '1', '現在の残高'),
+                const SizedBox(height: 12),
+                _inputItem(context, '2', 'プロジェクトで確保した金額'),
+                const SizedBox(height: 12),
+                _inputItem(context, '3', '予算で使った金額'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _inputItem(BuildContext context, String num, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Center(
+            child: Text(num,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(label, style: Theme.of(context).textTheme.bodyLarge),
+      ],
+    );
+  }
+}
+
+class _Page5 extends StatelessWidget {
+  const _Page5();
+
+  @override
+  Widget build(BuildContext context) {
+    return _OnboardingPage(
+      emoji: '🎯',
+      title: 'あなた専用の\n年間予算を作りましょう',
+      body: '年間手取り、固定費、貯蓄目標、\nプロジェクト、予算を登録すると、\n\n毎月あといくら使えるか、\n目標を達成できそうかを\n確認できるようになります。',
+    );
+  }
+}
+
+class _OnboardingPage extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String body;
+  final String? supplement;
+
+  const _OnboardingPage({
+    required this.emoji,
+    required this.title,
+    required this.body,
+    this.supplement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Text(emoji, style: const TextStyle(fontSize: 56)),
+          const SizedBox(height: 24),
+          Text(title, style: Theme.of(context).textTheme.displayLarge),
+          const SizedBox(height: 16),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textDark.withOpacity(0.7),
+                  height: 1.8,
+                ),
+          ),
+          if (supplement != null) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                supplement!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.primary,
+                      height: 1.6,
+                    ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

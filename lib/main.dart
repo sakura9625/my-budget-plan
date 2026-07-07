@@ -7,6 +7,8 @@ import 'models/manual_entry.dart';
 import 'models/budget_entry.dart';
 import 'models/app_settings.dart';
 import 'models/review.dart';
+import 'router.dart';
+import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,15 +34,17 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(child: Text('準備中')),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    return MaterialApp.router(
+      title: 'My Budget Plan',
+      theme: AppTheme.light(),
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
