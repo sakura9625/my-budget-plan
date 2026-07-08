@@ -9,6 +9,7 @@ import 'models/app_settings.dart';
 import 'models/review.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,18 @@ void main() async {
   await Hive.openBox<BudgetEntry>('budget_entries');
   await Hive.openBox<AppSettings>('settings');
   await Hive.openBox<Review>('reviews');
+
+  await NotificationService.init();
+
+  // 設定済みであれば通知をスケジュール
+  final settingsBox = Hive.box<AppSettings>('settings');
+  if (settingsBox.isNotEmpty) {
+    final settings = settingsBox.getAt(0)!;
+    if (settings.notificationEnabled) {
+      await NotificationService.scheduleMonthlyReviewReminder(
+          settings.reviewDay);
+    }
+  }
 
   runApp(const ProviderScope(child: MyApp()));
 }
