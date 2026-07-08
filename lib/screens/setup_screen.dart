@@ -592,8 +592,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final now = DateTime.now();
     int startYear = now.year;
     int startMonth = now.month;
-    int endYear = now.year + 1;
-    int endMonth = now.month;
+    final endDefault = DateTime(now.year, now.month + 6);
+    int endYear = endDefault.year;
+    int endMonth = endDefault.month;
 
     showModalBottomSheet(
       context: context,
@@ -696,8 +697,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final now = DateTime.now();
     int startYear = now.year;
     int startMonth = now.month;
-    int endYear = now.year;
-    int endMonth = 12;
+    final endDefault = DateTime(now.year, now.month + 6);
+    int endYear = endDefault.year;
+    int endMonth = endDefault.month;
 
     showModalBottomSheet(
       context: context,

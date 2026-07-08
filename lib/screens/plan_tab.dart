@@ -79,6 +79,12 @@ class _GoalList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _buildDescription(
+          type == GoalType.saving
+              ? '貯蓄は、純粋に貯めておきたいお金。\n使い途は決まってないけど、100万貯めたい！という目標があれば設定してください。'
+              : 'プロジェクトは、特定の目的・計画のためにつくりたいお金です。\nたとえば年末に海外旅行にいきたい、ちょっといいパソコンを買いたい！\nそんなときにご利用ください。',
+        ),
+        const SizedBox(height: 8),
         ...goals.map((g) {
           final gc = calc?.goalCalculations
               .where((c) => c.goal.id == g.id)
@@ -95,6 +101,24 @@ class _GoalList extends ConsumerWidget {
     );
   }
 
+  Widget _buildDescription(String text) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppTheme.textDark,
+          fontSize: 13,
+          height: 1.6,
+        ),
+      ),
+    );
+  }
+
   void _showGoalDialog(BuildContext context, WidgetRef ref, GoalType type,
       {Goal? existing}) {
     final nameController =
@@ -104,8 +128,9 @@ class _GoalList extends ConsumerWidget {
     final now = DateTime.now();
     int startYear = existing?.startYear ?? now.year;
     int startMonth = existing?.startMonth ?? now.month;
-    int endYear = existing?.endYear ?? now.year + 1;
-    int endMonth = existing?.endMonth ?? now.month;
+    final endDefault = DateTime(now.year, now.month + 6);
+    int endYear = existing?.endYear ?? endDefault.year;
+    int endMonth = existing?.endMonth ?? endDefault.month;
     final isEdit = existing != null;
 
     showModalBottomSheet(
@@ -634,6 +659,10 @@ class _BudgetList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _buildDescription(
+          '予算は、「趣味にいくら使いたい！」など特定のテーマで予算を決めておきたいお金。\nたとえば毎月の推し活に2万円ずつは使いたいな！子どものために3万使おう！\nそんなとき生活費とは別にして管理していけます。',
+        ),
+        const SizedBox(height: 8),
         ...budgets.map((b) {
           final bc = calc?.budgetCalculations
               .where((c) => c.budget.id == b.id)
@@ -650,6 +679,24 @@ class _BudgetList extends ConsumerWidget {
     );
   }
 
+  Widget _buildDescription(String text) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppTheme.textDark,
+          fontSize: 13,
+          height: 1.6,
+        ),
+      ),
+    );
+  }
+
   void _showBudgetDialog(BuildContext context, WidgetRef ref,
       {Budget? existing}) {
     final nameController =
@@ -659,8 +706,9 @@ class _BudgetList extends ConsumerWidget {
     final now = DateTime.now();
     int startYear = existing?.startYear ?? now.year;
     int startMonth = existing?.startMonth ?? now.month;
-    int endYear = existing?.endYear ?? now.year;
-    int endMonth = existing?.endMonth ?? 12;
+    final endDefault = DateTime(now.year, now.month + 6);
+    int endYear = existing?.endYear ?? endDefault.year;
+    int endMonth = existing?.endMonth ?? endDefault.month;
     final isEdit = existing != null;
 
     showModalBottomSheet(

@@ -119,8 +119,39 @@ class _Page2 extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           _buildDiagram(context),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _descItem('💰 貯蓄', '純粋に貯めておきたいお金'),
+                const SizedBox(height: 8),
+                _descItem('🎯 プロジェクト', '特定の目的・計画のためにつくりたいお金（例：海外旅行）'),
+                const SizedBox(height: 8),
+                _descItem('📋 予算', '「趣味にいくら使いたい！」というお金。生活費とは別にして管理'),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _descItem(String label, String desc) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        ),
+      ],
     );
   }
 

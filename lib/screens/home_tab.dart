@@ -126,6 +126,22 @@ class HomeTab extends ConsumerWidget {
               _summaryChip('年間自由枠', Formatter.man(calc.annualFreeAmount)),
             ],
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'この金額を使い切った前提で、下記の進捗を計算しています。',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                height: 1.5,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -217,8 +233,44 @@ class HomeTab extends ConsumerWidget {
   }
 
   Widget _buildOverallCard(BuildContext context, CalculationResult calc) {
-    final color = AppTheme.planStatusColor(calc.overallPlanStatus);
-    final label = AppTheme.planStatusLabel(calc.overallPlanStatus);
+    final hasNoGoals = calc.goalCalculations.isEmpty;
+
+    if (hasNoGoals) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Text('📋', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('年間計画',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text('計画なし',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade400)),
+                  const SizedBox(height: 2),
+                  const Text('計画タブから貯蓄・プロジェクトを追加してください',
+                      style: TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final color = AppTheme.planStatusColor(calc.overallPlanStatus ?? PlanStatus.safe);
+    final label = AppTheme.planStatusLabel(calc.overallPlanStatus ?? PlanStatus.safe);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -226,52 +278,62 @@ class HomeTab extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('全体進捗',
-                    style: TextStyle(
-                        color: Colors.grey.shade500, fontSize: 12)),
-                Text(
-                  '${(calc.totalOverallProgress * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                      fontSize: 28, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('全体進捗',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12)),
+                    Text(
+                      '${(calc.totalOverallProgress * 100).toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                          fontSize: 28, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('計画進捗',
-                    style: TextStyle(
-                        color: Colors.grey.shade500, fontSize: 12)),
-                Text(
-                  '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: color),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('計画進捗',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12)),
+                    Text(
+                      '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: color),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(label,
+                    style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+              ),
+            ],
           ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(label,
-                style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13)),
+          const Divider(height: 20),
+          const Text(
+            '毎月の自由枠を使い切った場合の計画達成見込みです。',
+            style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
           ),
         ],
       ),
@@ -358,6 +420,11 @@ class HomeTab extends ConsumerWidget {
             Text(
               '必要月額 ${Formatter.man(g.requiredMonthlyAmount)} / 残${g.remainingMonths}ヶ月',
               style: TextStyle(fontSize: 12, color: color),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '※自由枠使用後の残高をもとに計算した見込み額です。',
+              style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
             ),
           ],
         ],

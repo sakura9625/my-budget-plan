@@ -75,7 +75,7 @@ class CalculationResult {
   final List<BudgetCalculation> budgetCalculations;
   final double totalOverallProgress;
   final double totalPlanProgress;
-  final PlanStatus overallPlanStatus;
+  final PlanStatus? overallPlanStatus;
   final String headline;
   final bool hasCurrentMonthReview;
 
@@ -206,7 +206,9 @@ CalculationResult _calculate(
       ? goalCalculations.fold(0.0, (sum, gc) => sum + gc.planProgress) / goalCalculations.length
       : 0.0;
 
-  final overallPlanStatus = _toPlanStatus(totalPlanProgress);
+  final hasNoGoals = activeGoals.isEmpty;
+
+  final overallPlanStatus = hasNoGoals ? null : _toPlanStatus(totalPlanProgress);
 
   // 今日のひと言
   final hasCurrentMonthReview = reviews.isNotEmpty &&
@@ -218,6 +220,7 @@ CalculationResult _calculate(
     goalCalculations,
     budgetCalculations,
     overallPlanStatus,
+    hasNoGoals,
   );
 
   return CalculationResult(
@@ -256,9 +259,11 @@ String _buildHeadline(
   bool hasReview,
   List<GoalCalculation> goals,
   List<BudgetCalculation> budgets,
-  PlanStatus overallStatus,
+  PlanStatus? overallStatus,
+  bool hasNoGoals,
 ) {
   if (!hasReview) return '今月のレビューがまだ完了していません。';
+  if (hasNoGoals) return '貯蓄・プロジェクトを追加して計画を始めましょう。';
   if (goals.any((g) => g.planStatus == PlanStatus.difficult)) return '達成困難なプロジェクトがあります。';
   if (goals.any((g) => g.planStatus == PlanStatus.needsReview)) return '計画の見直しが必要なプロジェクトがあります。';
   if (budgets.any((b) => b.status == BudgetStatus.overBudget)) return '予算を超えているテーマがあります。自粛してください。';
