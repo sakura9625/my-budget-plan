@@ -27,11 +27,12 @@ enum BudgetStatus {
   overBudget,   // 自粛要請 120%以上
 }
 
-// 原資の健全性判定（口座残高で予算・プロジェクトの今月分をまかなえるか）
+// 原資の健全性判定（口座残高で予算・プロジェクトの今月分＋バッファをまかなえるか）
 enum AffordStatus {
   comfortable, // 余裕
   ok,          // 確保OK
   tight,       // 控えめに
+  critical,    // 要自粛
 }
 
 // Goal計算結果
@@ -254,12 +255,13 @@ CalculationResult _calculate(
     if (rawRemaining <= 0) continue; // 期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外
     affordProject += gc.requiredMonthlyAmount;
   }
-  final affordabilityStatus =
-      _toAffordabilityStatus(effectiveBalance, affordBudget, affordProject);
+  final buffer = settings.buffer;
+  final affordabilityStatus = _toAffordabilityStatus(
+      effectiveBalance, affordBudget, affordProject, buffer);
 
   debugPrint(
     '[calculation_provider] affordability balance=$effectiveBalance '
-    'affordBudget=$affordBudget affordProject=$affordProject '
+    'affordBudget=$affordBudget affordProject=$affordProject buffer=$buffer '
     'status=$affordabilityStatus',
   );
 
@@ -324,13 +326,14 @@ PlanStatus _toPlanStatus(double planProgress) {
 
 // 原資の健全性判定：口座残高が「予算＋プロジェクトの今月分必要額」を
 // まかなえているかを見る、残高ベースの独立した判定（予算バッジの利用率判定とは無関係）。
-AffordStatus? _toAffordabilityStatus(
-    double balance, double affordBudget, double affordProject) {
+AffordStatus? _toAffordabilityStatus(double balance, double affordBudget,
+    double affordProject, double buffer) {
   if (affordBudget <= 0 && affordProject <= 0) return null; // 予算・プロジェクトが0件
   final total = affordBudget + affordProject;
-  if (balance >= total) return AffordStatus.comfortable;
-  if (balance >= affordBudget) return AffordStatus.ok;
-  return AffordStatus.tight;
+  if (balance >= total + buffer) return AffordStatus.comfortable;
+  if (balance >= total) return AffordStatus.ok;
+  if (balance >= affordBudget) return AffordStatus.tight;
+  return AffordStatus.critical;
 }
 
 BudgetStatus _toBudgetStatus(double usageRate) {

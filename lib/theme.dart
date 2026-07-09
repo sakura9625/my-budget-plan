@@ -220,6 +220,7 @@ class AppTheme {
       case 'AffordStatus.comfortable': return success;
       case 'AffordStatus.ok':          return onTrack;
       case 'AffordStatus.tight':       return warning;
+      case 'AffordStatus.critical':    return danger;
       default: return Colors.grey;
     }
   }
@@ -229,6 +230,7 @@ class AppTheme {
       case 'AffordStatus.comfortable': return successBg;
       case 'AffordStatus.ok':          return onTrackBg;
       case 'AffordStatus.tight':       return warningBg;
+      case 'AffordStatus.critical':    return dangerBg;
       default: return const Color(0xFFF5F5F5);
     }
   }
@@ -238,6 +240,7 @@ class AppTheme {
       case 'AffordStatus.comfortable': return '余裕';
       case 'AffordStatus.ok':          return '確保OK';
       case 'AffordStatus.tight':       return '控えめに';
+      case 'AffordStatus.critical':    return '要自粛';
       default: return '-';
     }
   }

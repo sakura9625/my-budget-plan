@@ -17,6 +17,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   late TextEditingController _incomeController;
   late TextEditingController _fixedCostController;
   late TextEditingController _totalBalanceController;
+  late TextEditingController _bufferController;
   late int _reviewDay;
   late bool _notificationEnabled;
 
@@ -30,6 +31,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         text: settings?.annualFixedCost.toStringAsFixed(0) ?? '');
     _totalBalanceController = TextEditingController(
         text: settings?.totalBalance.toStringAsFixed(0) ?? '');
+    _bufferController = TextEditingController(
+        text: settings?.buffer.toStringAsFixed(0) ?? '0');
     _reviewDay = settings?.reviewDay ?? 28;
     _notificationEnabled = settings?.notificationEnabled ?? true;
   }
@@ -114,6 +117,25 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveTotalBalance,
+                child: const Text('保存'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildSection(
+            context,
+            title: '毎月自由に使いたい額（バッファ）',
+            children: [
+              const Text(
+                '原資の健全性判定で使う固定額です。残高からこの額を引いても'
+                '予算・プロジェクトを確保できるかを見ます。未設定なら0万円として扱います。',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.6),
+              ),
+              const SizedBox(height: 16),
+              _buildInputField('バッファ（万円）', _bufferController),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveBuffer,
                 child: const Text('保存'),
               ),
             ],
@@ -299,6 +321,18 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     final settings = ref.read(settingsProvider);
     if (settings == null) return;
     settings.totalBalance = double.tryParse(_totalBalanceController.text) ?? 0;
+    await ref.read(settingsProvider.notifier).save(settings);
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('保存しました')));
+    }
+  }
+
+  Future<void> _saveBuffer() async {
+    FocusScope.of(context).unfocus();
+    final settings = ref.read(settingsProvider);
+    if (settings == null) return;
+    settings.buffer = double.tryParse(_bufferController.text) ?? 0;
     await ref.read(settingsProvider.notifier).save(settings);
     if (mounted) {
       ScaffoldMessenger.of(context)

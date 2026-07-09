@@ -25,13 +25,14 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       notificationMinute: fields[5] as int,
       initialSetupCompleted: fields[6] as bool,
       totalBalance: fields[7] == null ? 0 : fields[7] as double,
+      buffer: fields[8] == null ? 0 : fields[8] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.annualIncome)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(6)
       ..write(obj.initialSetupCompleted)
       ..writeByte(7)
-      ..write(obj.totalBalance);
+      ..write(obj.totalBalance)
+      ..writeByte(8)
+      ..write(obj.buffer);
   }
 
   @override

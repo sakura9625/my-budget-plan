@@ -28,6 +28,9 @@ class AppSettings extends HiveObject {
   @HiveField(7)
   double totalBalance;
 
+  @HiveField(8)
+  double buffer;
+
   AppSettings({
     required this.annualIncome,
     required this.annualFixedCost,
@@ -37,6 +40,7 @@ class AppSettings extends HiveObject {
     this.notificationMinute = 0,
     this.initialSetupCompleted = false,
     this.totalBalance = 0,
+    this.buffer = 0,
   });
 
   double get annualFreeMoney => annualIncome - annualFixedCost;
