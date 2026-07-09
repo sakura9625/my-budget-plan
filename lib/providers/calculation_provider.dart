@@ -27,6 +27,13 @@ enum BudgetStatus {
   overBudget,   // 自粛要請 120%以上
 }
 
+// 原資の健全性判定（口座残高で予算・プロジェクトの今月分をまかなえるか）
+enum AffordStatus {
+  comfortable, // 余裕
+  ok,          // 確保OK
+  tight,       // 控えめに
+}
+
 // Goal計算結果
 class GoalCalculation {
   final Goal goal;
@@ -81,6 +88,10 @@ class CalculationResult {
   final PlanStatus? overallPlanStatus;
   final String headline;
   final bool hasCurrentMonthReview;
+  final double affordBudget;
+  final double affordProject;
+  final AffordStatus? affordabilityStatus;
+  final double totalBalance;
 
   CalculationResult({
     required this.annualFreeMoney,
@@ -95,6 +106,10 @@ class CalculationResult {
     required this.overallPlanStatus,
     required this.headline,
     required this.hasCurrentMonthReview,
+    required this.affordBudget,
+    required this.affordProject,
+    required this.affordabilityStatus,
+    required this.totalBalance,
   });
 }
 
@@ -229,6 +244,25 @@ CalculationResult _calculate(
 
   final overallPlanStatus = hasNoGoals ? null : _toPlanStatus(totalPlanProgress);
 
+  // 原資の健全性判定（口座残高で予算・プロジェクトの今月分をまかなえるか）
+  final affordBudget = budgets.fold(0.0, (sum, b) => sum + b.monthlyAmount);
+  final nowMonthTotalForAfford = now.year * 12 + now.month;
+  double affordProject = 0;
+  for (final gc in goalCalculations) {
+    final rawRemaining =
+        (gc.goal.endYear * 12 + gc.goal.endMonth) - nowMonthTotalForAfford + 1;
+    if (rawRemaining <= 0) continue; // 期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外
+    affordProject += gc.requiredMonthlyAmount;
+  }
+  final affordabilityStatus =
+      _toAffordabilityStatus(effectiveBalance, affordBudget, affordProject);
+
+  debugPrint(
+    '[calculation_provider] affordability balance=$effectiveBalance '
+    'affordBudget=$affordBudget affordProject=$affordProject '
+    'status=$affordabilityStatus',
+  );
+
   // 今日のひと言
   final hasCurrentMonthReview = reviews.isNotEmpty &&
       reviews.first.year == now.year &&
@@ -272,6 +306,10 @@ CalculationResult _calculate(
     overallPlanStatus: overallPlanStatus,
     headline: headline,
     hasCurrentMonthReview: hasCurrentMonthReview,
+    affordBudget: affordBudget,
+    affordProject: affordProject,
+    affordabilityStatus: affordabilityStatus,
+    totalBalance: effectiveBalance,
   );
 }
 
@@ -282,6 +320,17 @@ PlanStatus _toPlanStatus(double planProgress) {
   if (planProgress >= 0.6) return PlanStatus.danger;
   if (planProgress >= 0.4) return PlanStatus.needsReview;
   return PlanStatus.difficult;
+}
+
+// 原資の健全性判定：口座残高が「予算＋プロジェクトの今月分必要額」を
+// まかなえているかを見る、残高ベースの独立した判定（予算バッジの利用率判定とは無関係）。
+AffordStatus? _toAffordabilityStatus(
+    double balance, double affordBudget, double affordProject) {
+  if (affordBudget <= 0 && affordProject <= 0) return null; // 予算・プロジェクトが0件
+  final total = affordBudget + affordProject;
+  if (balance >= total) return AffordStatus.comfortable;
+  if (balance >= affordBudget) return AffordStatus.ok;
+  return AffordStatus.tight;
 }
 
 BudgetStatus _toBudgetStatus(double usageRate) {

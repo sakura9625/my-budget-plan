@@ -213,6 +213,35 @@ class AppTheme {
     }
   }
 
+  // ---- 原資の健全性判定 ----
+
+  static Color affordStatusColor(dynamic status) {
+    switch (status.toString()) {
+      case 'AffordStatus.comfortable': return success;
+      case 'AffordStatus.ok':          return onTrack;
+      case 'AffordStatus.tight':       return warning;
+      default: return Colors.grey;
+    }
+  }
+
+  static Color affordStatusBgColor(dynamic status) {
+    switch (status.toString()) {
+      case 'AffordStatus.comfortable': return successBg;
+      case 'AffordStatus.ok':          return onTrackBg;
+      case 'AffordStatus.tight':       return warningBg;
+      default: return const Color(0xFFF5F5F5);
+    }
+  }
+
+  static String affordStatusLabel(dynamic status) {
+    switch (status.toString()) {
+      case 'AffordStatus.comfortable': return '余裕';
+      case 'AffordStatus.ok':          return '確保OK';
+      case 'AffordStatus.tight':       return '控えめに';
+      default: return '-';
+    }
+  }
+
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFFF5C400), Color(0xFFFFD740)],
     begin: Alignment.topLeft,

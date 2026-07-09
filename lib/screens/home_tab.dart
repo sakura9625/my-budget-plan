@@ -29,6 +29,8 @@ class HomeTab extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildHeadline(context, calc.headline),
+          const SizedBox(height: 8),
+          _buildAffordabilityDebugLabel(calc),
           const SizedBox(height: 20),
           _buildFreeAmountCard(context, calc),
           const SizedBox(height: 28),
@@ -90,6 +92,31 @@ class HomeTab extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // [DEBUG] 原資の健全性判定の確認用表示。本組み込みは別途対応予定。
+  Widget _buildAffordabilityDebugLabel(CalculationResult calc) {
+    final status = calc.affordabilityStatus;
+    if (status == null) {
+      return const SizedBox.shrink();
+    }
+    final label = AppTheme.affordStatusLabel(status);
+    final color = AppTheme.affordStatusColor(status);
+    final bgColor = AppTheme.affordStatusBgColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '[DEBUG] 原資の健全性: $label '
+        '(残高${Formatter.man(calc.totalBalance)} / '
+        '予算${Formatter.man(calc.affordBudget)}+プロジェクト${Formatter.man(calc.affordProject)}'
+        '=${Formatter.man(calc.affordBudget + calc.affordProject)})',
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),
     );
   }
