@@ -15,6 +15,7 @@ class SettingsTab extends ConsumerStatefulWidget {
 class _SettingsTabState extends ConsumerState<SettingsTab> {
   late TextEditingController _incomeController;
   late TextEditingController _fixedCostController;
+  late TextEditingController _totalBalanceController;
   late int _reviewDay;
   late bool _notificationEnabled;
 
@@ -26,6 +27,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         text: settings?.annualIncome.toStringAsFixed(0) ?? '');
     _fixedCostController = TextEditingController(
         text: settings?.annualFixedCost.toStringAsFixed(0) ?? '');
+    _totalBalanceController = TextEditingController(
+        text: settings?.totalBalance.toStringAsFixed(0) ?? '');
     _reviewDay = settings?.reviewDay ?? 28;
     _notificationEnabled = settings?.notificationEnabled ?? true;
   }
@@ -61,7 +64,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('年間自由資金',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark)),
                     AnimatedBuilder(
                       animation: Listenable.merge(
                           [_incomeController, _fixedCostController]),
@@ -87,6 +92,24 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           const SizedBox(height: 20),
           _buildSection(
             context,
+            title: '現在の残高',
+            children: [
+              const Text(
+                'アプリ全体で1つの総残高として扱われます。レビューで残高を入力すると、ここも同じ値に更新されます。',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.6),
+              ),
+              const SizedBox(height: 16),
+              _buildInputField('現在の残高（万円）', _totalBalanceController),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveTotalBalance,
+                child: const Text('保存'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildSection(
+            context,
             title: 'レビュー日設定',
             children: [
               Text(
@@ -94,7 +117,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(color: Colors.grey, height: 1.6),
+                    ?.copyWith(color: const Color(0xFF6B7280), height: 1.6),
               ),
               const SizedBox(height: 16),
               Row(
@@ -142,11 +165,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('レビューリマインダー',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark)),
                       Text(
                         '毎月$_reviewDay日に通知します',
                         style: const TextStyle(
-                            color: Colors.grey, fontSize: 12),
+                            color: Color(0xFF6B7280), fontSize: 12),
                       ),
                     ],
                   ),
@@ -192,7 +217,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Text(title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: AppTheme.textDark)),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -206,7 +235,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       children: [
         Text(label,
             style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 14)),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppTheme.textDark)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -222,8 +253,10 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: AppTheme.textDark)),
       ],
     );
   }
@@ -240,6 +273,17 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     }
     settings.annualIncome = income;
     settings.annualFixedCost = fixed;
+    await ref.read(settingsProvider.notifier).save(settings);
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('保存しました')));
+    }
+  }
+
+  Future<void> _saveTotalBalance() async {
+    final settings = ref.read(settingsProvider);
+    if (settings == null) return;
+    settings.totalBalance = double.tryParse(_totalBalanceController.text) ?? 0;
     await ref.read(settingsProvider.notifier).save(settings);
     if (mounted) {
       ScaffoldMessenger.of(context)

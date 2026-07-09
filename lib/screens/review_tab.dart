@@ -11,6 +11,7 @@ import '../providers/budget_provider.dart';
 import '../providers/manual_entry_provider.dart';
 import '../providers/budget_entry_provider.dart';
 import '../providers/calculation_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 
@@ -68,12 +69,15 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('${now.year}年${now.month}月のレビュー',
-              style: Theme.of(context).textTheme.titleMedium),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: AppTheme.textDark)),
           const SizedBox(height: 8),
           Text(
             '今月のレビューがまだ完了していません。\nレビューをすると、今月あといくら使えるか確認できます。',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey,
+                  color: const Color(0xFF6B7280),
                   height: 1.6,
                 ),
           ),
@@ -88,7 +92,17 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
   }
 
   Widget _buildReviewDoneCard(BuildContext context, Review review) {
-    final statusColor = _statusColor(review.overallStatus);
+    // 進捗・判定はcalculationProvider（ホーム画面と共通の単一計算元）から取得し、
+    // レビュー保存時点のスナップショットとズレないようにする。
+    final calc = ref.watch(calculationProvider);
+    final overallProgress = calc?.totalOverallProgress ?? review.overallProgress;
+    final planProgress = calc?.totalPlanProgress ?? review.planProgress;
+    final statusLabel = calc?.overallPlanStatus != null
+        ? AppTheme.planStatusLabel(calc!.overallPlanStatus)
+        : review.overallStatus;
+    final statusColor = calc?.overallPlanStatus != null
+        ? AppTheme.planStatusColor(calc!.overallPlanStatus)
+        : _statusColor(review.overallStatus);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -102,14 +116,17 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('${review.year}年${review.month}月のレビュー',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppTheme.textDark)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(review.overallStatus,
+                child: Text(statusLabel,
                     style: TextStyle(
                         color: statusColor,
                         fontWeight: FontWeight.bold,
@@ -120,16 +137,13 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
           const SizedBox(height: 16),
           _reviewRow('残高', Formatter.man(review.effectiveBalance)),
           _reviewRow('全体進捗',
-              '${(review.overallProgress * 100).toStringAsFixed(0)}%'),
+              '${(overallProgress * 100).toStringAsFixed(0)}%'),
           _reviewRow('計画進捗',
-              '${(review.planProgress * 100).toStringAsFixed(0)}%'),
+              '${(planProgress * 100).toStringAsFixed(0)}%'),
           if (review.comment != null) ...[
             const Divider(height: 20),
             Text(review.comment!,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey)),
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
           ],
           const SizedBox(height: 16),
           OutlinedButton(
@@ -152,10 +166,12 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
           Text(value,
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 13)),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: AppTheme.textDark)),
         ],
       ),
     );
@@ -177,13 +193,14 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${review.year}年${review.month}月',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 Text('残高 ${Formatter.man(review.effectiveBalance)}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
                 if (review.comment != null)
                   Text(review.comment!,
                       style: const TextStyle(
-                          color: Colors.grey, fontSize: 12),
+                          color: Color(0xFF6B7280), fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
               ],
@@ -207,7 +224,7 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
               const SizedBox(height: 4),
               Text(
                 '全体 ${(review.overallProgress * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(color: Colors.grey, fontSize: 11),
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11),
               ),
             ],
           ),
@@ -222,7 +239,7 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
       case '順調': return AppTheme.primary;
       case '安全': return AppTheme.primary;
       case '危険': return AppTheme.warning;
-      case '見直し要請': return AppTheme.accent;
+      case '見直し要請': return AppTheme.needsReview;
       case '達成困難': return AppTheme.danger;
       default: return Colors.grey;
     }
@@ -260,6 +277,16 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
   // Budget手入力
   final Map<String, TextEditingController> _budgetControllers = {};
   final Map<String, TextEditingController> _budgetMemoControllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // 現在の総残高（settings.totalBalance）を初期値として表示する
+    final totalBalance = ref.read(settingsProvider)?.totalBalance ?? 0;
+    if (totalBalance != 0) {
+      _balanceController.text = totalBalance.toStringAsFixed(0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,17 +335,19 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
         children: [
           if (_step > 0)
             IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => setState(() => _step--),
               padding: EdgeInsets.zero,
             ),
           Expanded(
             child: Text(titles[_step],
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
           ),
           IconButton(
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -366,7 +395,7 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
             style: _labelStyle()),
         const SizedBox(height: 4),
         Text('ざっくりで大丈夫です。カード引き落としが気になる場合は差し引いた金額で入力してください。',
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            style: const TextStyle(color: Color(0xFFC7CDDB), fontSize: 12)),
         const SizedBox(height: 16),
         TextField(
           controller: _balanceController,
@@ -396,11 +425,11 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
             style: _labelStyle()),
         const SizedBox(height: 4),
         Text('なければスキップできます。',
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            style: const TextStyle(color: Color(0xFFC7CDDB), fontSize: 12)),
         const SizedBox(height: 16),
         if (goals.isEmpty)
           const Text('進行中のGoalがありません',
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: Color(0xFFC7CDDB))),
         ...goals.map((g) => _buildGoalInput(g)),
         const SizedBox(height: 24),
         ElevatedButton(
@@ -428,7 +457,8 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
                   style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               Text(goal.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppTheme.textDark)),
             ],
           ),
           const SizedBox(height: 8),
@@ -457,11 +487,11 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
             style: _labelStyle()),
         const SizedBox(height: 4),
         Text('なければスキップできます。',
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            style: const TextStyle(color: Color(0xFFC7CDDB), fontSize: 12)),
         const SizedBox(height: 16),
         if (budgets.isEmpty)
           const Text('予算が登録されていません',
-              style: TextStyle(color: Colors.grey)),
+              style: TextStyle(color: Color(0xFFC7CDDB))),
         ...budgets.map((b) => _buildBudgetInput(b)),
         const SizedBox(height: 24),
         ElevatedButton(
@@ -489,11 +519,12 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
                   style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 8),
               Text(budget.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppTheme.textDark)),
               const Spacer(),
               Text('月額 ${Formatter.man(budget.monthlyAmount)}',
                   style: const TextStyle(
-                      color: Colors.grey, fontSize: 12)),
+                      color: Color(0xFF6B7280), fontSize: 12)),
             ],
           ),
           const SizedBox(height: 8),
@@ -521,7 +552,7 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
         Text('今月のコメント（任意）', style: _labelStyle()),
         const SizedBox(height: 4),
         Text('今月の振り返りや気づきを記録しておきましょう。',
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            style: const TextStyle(color: Color(0xFFC7CDDB), fontSize: 12)),
         const SizedBox(height: 16),
         TextField(
           controller: _commentController,
@@ -589,24 +620,24 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              style: const TextStyle(color: Color(0xFFC7CDDB), fontSize: 14)),
           Text(value,
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
-                  color: valueColor ?? AppTheme.textDark)),
+                  color: valueColor ?? Colors.white)),
         ],
       ),
     );
   }
 
   TextStyle _labelStyle() {
-    return const TextStyle(fontSize: 15, fontWeight: FontWeight.bold);
+    return const TextStyle(
+        fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white);
   }
 
   Future<void> _saveReview(List goals, List budgets) async {
     final balance = double.tryParse(_balanceController.text) ?? 0;
-    final calc = ref.read(calculationProvider);
     final now = DateTime.now();
 
     // Goal手入力を保存
@@ -649,11 +680,18 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
       }
     }
 
-    // Review保存
-    final statusLabel = calc != null
-        ? AppTheme.planStatusLabel(calc.overallPlanStatus)
-        : '安全';
+    // 総残高（アプリ全体で1つ、settings.totalBalance）を更新する。
+    // レビュー・ホーム・設定画面はすべてこの値を単一の残高ソースとして参照する。
+    final settings = ref.read(settingsProvider);
+    if (settings != null) {
+      settings.totalBalance = balance;
+      await ref.read(settingsProvider.notifier).save(settings);
+    }
 
+    // Review保存
+    // 先に一旦保存してeffectiveBalanceを確定させ、calculationProvider（ホーム画面と
+    // 共通の単一計算元）にこのレビューの残高・手入力を反映させた上で進捗を取得する。
+    // これにより保存される履歴の値がホーム画面の表示と一致する。
     final review = Review(
       id: const Uuid().v4(),
       year: now.year,
@@ -661,15 +699,23 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
       reviewDate: now,
       accountBalance: balance,
       effectiveBalance: balance,
-      overallProgress: calc?.totalOverallProgress ?? 0,
-      planProgress: calc?.totalPlanProgress ?? 0,
-      overallStatus: statusLabel,
+      overallProgress: 0,
+      planProgress: 0,
+      overallStatus: '安全',
       comment: _commentController.text.isEmpty
           ? null
           : _commentController.text,
-      homeHeadline: calc?.headline,
+      homeHeadline: null,
     );
+    await ref.read(reviewProvider.notifier).save(review);
 
+    final calc = ref.read(calculationProvider);
+    review.overallProgress = calc?.totalOverallProgress ?? 0;
+    review.planProgress = calc?.totalPlanProgress ?? 0;
+    review.overallStatus = calc != null
+        ? AppTheme.planStatusLabel(calc.overallPlanStatus)
+        : '安全';
+    review.homeHeadline = calc?.headline;
     await ref.read(reviewProvider.notifier).save(review);
 
     if (mounted) {

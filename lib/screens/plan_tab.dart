@@ -47,7 +47,7 @@ class _PlanTabState extends ConsumerState<PlanTab>
             Tab(text: '予算'),
           ],
           labelColor: AppTheme.primary,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: const Color(0xFFC7CDDB),
           indicatorColor: AppTheme.primary,
         ),
       ),
@@ -105,13 +105,13 @@ class _GoalList extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.06),
+        color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text,
         style: const TextStyle(
-          color: AppTheme.textDark,
+          color: Color(0xFFC7CDDB),
           fontSize: 13,
           height: 1.6,
         ),
@@ -128,7 +128,8 @@ class _GoalList extends ConsumerWidget {
     final now = DateTime.now();
     int startYear = existing?.startYear ?? now.year;
     int startMonth = existing?.startMonth ?? now.month;
-    final endDefault = DateTime(now.year, now.month + 6);
+    // 6ヶ月間（開始月を1ヶ月目として数える）＝開始月+5
+    final endDefault = DateTime(now.year, now.month + 5);
     int endYear = existing?.endYear ?? endDefault.year;
     int endMonth = existing?.endMonth ?? endDefault.month;
     final isEdit = existing != null;
@@ -155,8 +156,16 @@ class _GoalList extends ConsumerWidget {
                 isEdit
                     ? (type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集')
                     : (type == GoalType.saving ? '貯蓄を追加' : 'プロジェクトを追加'),
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: AppTheme.textDark),
               ),
+              if (type == GoalType.project) ...[
+                const SizedBox(height: 4),
+                const Text('どんな目的でいくら貯めたいか記入しましょう',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+              ],
               const SizedBox(height: 20),
               TextField(
                 controller: nameController,
@@ -251,6 +260,9 @@ class _GoalCard extends ConsumerWidget {
     final color = calc != null
         ? AppTheme.planStatusColor(calc!.planStatus)
         : Colors.grey;
+    final bgColor = calc != null
+        ? AppTheme.planStatusBgColor(calc!.planStatus)
+        : const Color(0xFFF5F5F5);
     final label = calc != null
         ? AppTheme.planStatusLabel(calc!.planStatus)
         : '-';
@@ -278,10 +290,11 @@ class _GoalCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(goal.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                     Text(
                       '目標 ${Formatter.man(goal.targetAmount)} / ${goal.endYear}年${goal.endMonth}月',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
                     ),
                   ],
                 ),
@@ -289,7 +302,7 @@ class _GoalCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: bgColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(label,
@@ -316,10 +329,10 @@ class _GoalCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('手入力 ${Formatter.man(goal.manualAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               Text(
                 '進捗 ${((calc?.overallProgress ?? 0) * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
               ),
             ],
           ),
@@ -350,7 +363,9 @@ class _GoalCard extends ConsumerWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+                    ?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF6B7280))),
             const SizedBox(height: 4),
             ...entries.take(3).map((e) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
@@ -431,14 +446,17 @@ class _GoalCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('確保済み金額を入力',
-                style: Theme.of(context).textTheme.titleLarge),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: AppTheme.textDark)),
             const SizedBox(height: 8),
             Text(
               '実際に別口座へ移した・支払った金額を入力してください。',
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: Colors.grey),
+                  ?.copyWith(color: const Color(0xFF6B7280)),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -513,7 +531,10 @@ class _GoalCard extends ConsumerWidget {
             children: [
               Text(
                 goal.type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: AppTheme.textDark),
               ),
               const SizedBox(height: 20),
               TextField(controller: nameController,
@@ -627,7 +648,7 @@ class _StatusDropdown extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(_statusLabel(goal.status),
-                style: const TextStyle(fontSize: 12)),
+                style: const TextStyle(fontSize: 12, color: AppTheme.textDark)),
             const SizedBox(width: 4),
             const Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey),
           ],
@@ -683,13 +704,13 @@ class _BudgetList extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.06),
+        color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         text,
         style: const TextStyle(
-          color: AppTheme.textDark,
+          color: Color(0xFFC7CDDB),
           fontSize: 13,
           height: 1.6,
         ),
@@ -706,7 +727,8 @@ class _BudgetList extends ConsumerWidget {
     final now = DateTime.now();
     int startYear = existing?.startYear ?? now.year;
     int startMonth = existing?.startMonth ?? now.month;
-    final endDefault = DateTime(now.year, now.month + 6);
+    // 6ヶ月間（開始月を1ヶ月目として数える）＝開始月+5
+    final endDefault = DateTime(now.year, now.month + 5);
     int endYear = existing?.endYear ?? endDefault.year;
     int endMonth = existing?.endMonth ?? endDefault.month;
     final isEdit = existing != null;
@@ -729,8 +751,14 @@ class _BudgetList extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(isEdit ? '予算を編集' : '予算を追加',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text(isEdit ? '予算を編集' : '毎月の特別予算を追加',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: AppTheme.textDark)),
+              const SizedBox(height: 4),
+              const Text('月々の特別に確保したい予算を記入しましょう',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
               const SizedBox(height: 20),
               TextField(
                 controller: nameController,
@@ -823,6 +851,9 @@ class _BudgetCard extends ConsumerWidget {
     final color = calc != null
         ? AppTheme.budgetStatusColor(calc!.status)
         : Colors.grey;
+    final bgColor = calc != null
+        ? AppTheme.budgetStatusBgColor(calc!.status)
+        : const Color(0xFFF5F5F5);
     final label = calc != null
         ? AppTheme.budgetStatusLabel(calc!.status)
         : '-';
@@ -848,10 +879,11 @@ class _BudgetCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(budget.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                     Text(
                       '月額 ${Formatter.man(budget.monthlyAmount)} / ${budget.endYear}年${budget.endMonth}月まで',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
                     ),
                   ],
                 ),
@@ -859,7 +891,7 @@ class _BudgetCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: bgColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(label,
@@ -885,9 +917,9 @@ class _BudgetCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('利用済 ${Formatter.man(budget.usedAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               Text('予算合計 ${Formatter.man(budget.plannedAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
             ],
           ),
           const Divider(height: 20),
@@ -945,7 +977,10 @@ class _BudgetCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('予算を編集',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: AppTheme.textDark)),
               const SizedBox(height: 20),
               TextField(controller: nameController,
                   decoration: const InputDecoration(hintText: '名前')),
@@ -1088,31 +1123,41 @@ class _MonthPicker extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
           const SizedBox(height: 4),
           Text('$year年$month月',
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 14)),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppTheme.textDark)),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month - 1;
                   if (m < 1) { m = 12; y--; }
                   onChanged(y, m);
                 },
-                child: const Icon(Icons.chevron_left,
-                    size: 20, color: AppTheme.primary),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.chevron_left,
+                      size: 20, color: AppTheme.primary),
+                ),
               ),
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month + 1;
                   if (m > 12) { m = 1; y++; }
                   onChanged(y, m);
                 },
-                child: const Icon(Icons.chevron_right,
-                    size: 20, color: AppTheme.primary),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.chevron_right,
+                      size: 20, color: AppTheme.primary),
+                ),
               ),
             ],
           ),

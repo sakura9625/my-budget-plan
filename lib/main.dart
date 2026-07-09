@@ -32,16 +32,18 @@ void main() async {
   await Hive.openBox<AppSettings>('settings');
   await Hive.openBox<Review>('reviews');
 
-  await NotificationService.init();
-
-  // 設定済みであれば通知をスケジュール
-  final settingsBox = Hive.box<AppSettings>('settings');
-  if (settingsBox.isNotEmpty) {
-    final settings = settingsBox.getAt(0)!;
-    if (settings.notificationEnabled) {
-      await NotificationService.scheduleMonthlyReviewReminder(
-          settings.reviewDay);
+  try {
+    await NotificationService.init();
+    final settingsBox = Hive.box<AppSettings>('settings');
+    if (settingsBox.isNotEmpty) {
+      final settings = settingsBox.getAt(0)!;
+      if (settings.notificationEnabled) {
+        await NotificationService.scheduleMonthlyReviewReminder(
+            settings.reviewDay);
+      }
     }
+  } catch (e) {
+    debugPrint('Notification init error: $e');
   }
 
   runApp(const ProviderScope(child: MyApp()));

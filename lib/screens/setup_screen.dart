@@ -29,10 +29,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   // Step2 貯蓄
   final List<Map<String, dynamic>> _savings = [];
 
-  // Step3 プロジェクト
+  // Step3 現在の残高
+  final _totalBalanceController = TextEditingController();
+
+  // Step4 プロジェクト
   final List<Map<String, dynamic>> _projects = [];
 
-  // Step4 予算
+  // Step5 予算
   final List<Map<String, dynamic>> _budgets = [];
 
   // Step6 レビュー日
@@ -49,6 +52,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   final _stepTitles = [
     '収入・固定費',
     '貯蓄目標',
+    '現在の残高',
     'プロジェクト',
     '予算',
     '年間設計確認',
@@ -57,7 +61,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   ];
 
   void _nextStep() {
-    if (_currentStep < 6) {
+    if (_currentStep < 7) {
       setState(() => _currentStep++);
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -90,7 +94,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(
-            value: (_currentStep + 1) / 7,
+            value: (_currentStep + 1) / 8,
             backgroundColor: Colors.grey.shade200,
             valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
           ),
@@ -102,6 +106,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         children: [
           _buildStep1(),
           _buildStep2(),
+          _buildStepBalance(),
           _buildStep3(),
           _buildStep4(),
           _buildStep5(),
@@ -122,7 +127,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           const SizedBox(height: 8),
           Text('まず基本情報を入力してください',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
+                    color: const Color(0xFFC7CDDB),
                   )),
           const SizedBox(height: 24),
           _buildLabel('年間手取り（万円）'),
@@ -191,7 +196,39 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     );
   }
 
-  // Step3: プロジェクト
+  // Step3: 現在の残高
+  Widget _buildStepBalance() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Text('現在の残高',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('今の貯蓄・口座残高の合計を入力しましょう',
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 24),
+          _buildLabel('現在の残高（万円）'),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _totalBalanceController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: '例：100', suffixText: '万円'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _nextStep,
+            child: const Text('次へ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step4: プロジェクト
   Widget _buildStep3() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -285,11 +322,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           _buildSummaryRow('年間手取り', Formatter.man(income)),
           _buildSummaryRow('年間固定費', Formatter.man(fixed)),
           _buildSummaryRow('年間自由資金', Formatter.man(annualFree)),
-          const Divider(height: 24),
+          _buildSummaryRow('現在の残高',
+              Formatter.man(double.tryParse(_totalBalanceController.text) ?? 0)),
+          Divider(height: 24, color: Colors.white.withOpacity(0.2)),
           _buildSummaryRow('今年の貯蓄目標', Formatter.man(totalGoal)),
           _buildSummaryRow('今年のプロジェクト', ''),
           _buildSummaryRow('今年の予算合計', Formatter.man(totalBudget)),
-          const Divider(height: 24),
+          Divider(height: 24, color: Colors.white.withOpacity(0.2)),
           _buildSummaryRow(
             '年間自由枠',
             Formatter.man(annualFreeAmount),
@@ -338,7 +377,11 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             ),
             child: Column(
               children: [
-                Text('毎月', style: Theme.of(context).textTheme.bodyMedium),
+                Text('毎月',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppTheme.textDark)),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -393,7 +436,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             Text(
               'ホーム画面で今月の状況を確認してみましょう。',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.grey,
+                    color: const Color(0xFFC7CDDB),
                     height: 1.6,
                   ),
               textAlign: TextAlign.center,
@@ -430,7 +473,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.white)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -487,10 +531,11 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(data['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 Text(
                     '目標 ${Formatter.man((data['amount'] as double))} / ${data['startYear']}/${data['startMonth']}〜${data['endYear']}/${data['endMonth']}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               ],
             ),
           ),
@@ -520,9 +565,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(data['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 Text('月額 ${Formatter.man((data['amount'] as double))}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               ],
             ),
           ),
@@ -570,14 +616,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               style: TextStyle(
                   fontWeight:
                       highlight ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14)),
+                  fontSize: 14,
+                  color: Colors.white)),
           Text(value,
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: highlight ? 16 : 14,
                   color: isNegative
                       ? AppTheme.danger
-                      : (highlight ? AppTheme.primary : AppTheme.textDark))),
+                      : (highlight ? AppTheme.primary : Colors.white))),
         ],
       ),
     );
@@ -592,7 +639,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final now = DateTime.now();
     int startYear = now.year;
     int startMonth = now.month;
-    final endDefault = DateTime(now.year, now.month + 6);
+    // 6ヶ月間（開始月を1ヶ月目として数える）＝開始月+5
+    final endDefault = DateTime(now.year, now.month + 5);
     int endYear = endDefault.year;
     int endMonth = endDefault.month;
 
@@ -615,7 +663,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(isSaving ? '貯蓄を追加' : 'プロジェクトを追加',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: AppTheme.textDark)),
+              if (!isSaving) ...[
+                const SizedBox(height: 4),
+                const Text('どんな目的でいくら貯めたいか記入しましょう',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+              ],
               const SizedBox(height: 20),
               TextField(
                 controller: nameController,
@@ -697,7 +753,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final now = DateTime.now();
     int startYear = now.year;
     int startMonth = now.month;
-    final endDefault = DateTime(now.year, now.month + 6);
+    // 6ヶ月間（開始月を1ヶ月目として数える）＝開始月+5
+    final endDefault = DateTime(now.year, now.month + 5);
     int endYear = endDefault.year;
     int endMonth = endDefault.month;
 
@@ -719,8 +776,14 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('予算を追加',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text('毎月の特別予算を追加',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: AppTheme.textDark)),
+              const SizedBox(height: 4),
+              const Text('月々の特別に確保したい予算を記入しましょう',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
               const SizedBox(height: 20),
               TextField(
                 controller: nameController,
@@ -803,31 +866,41 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         children: [
           Text(label,
               style:
-                  const TextStyle(fontSize: 11, color: Colors.grey)),
+                  const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
           const SizedBox(height: 4),
           Text('$year年$month月',
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 14)),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppTheme.textDark)),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month - 1;
                   if (m < 1) { m = 12; y--; }
                   onChanged(y, m);
                 },
-                child: const Icon(Icons.chevron_left,
-                    size: 20, color: AppTheme.primary),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.chevron_left,
+                      size: 20, color: AppTheme.primary),
+                ),
               ),
               GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month + 1;
                   if (m > 12) { m = 1; y++; }
                   onChanged(y, m);
                 },
-                child: const Icon(Icons.chevron_right,
-                    size: 20, color: AppTheme.primary),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.chevron_right,
+                      size: 20, color: AppTheme.primary),
+                ),
               ),
             ],
           ),
@@ -842,12 +915,15 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final income = double.tryParse(_incomeController.text) ?? 0;
     final fixed = double.tryParse(_fixedCostController.text) ?? 0;
 
+    final totalBalance = double.tryParse(_totalBalanceController.text) ?? 0;
+
     final settings = AppSettings(
       annualIncome: income,
       annualFixedCost: fixed,
       reviewDay: _reviewDay,
       notificationEnabled: true,
       initialSetupCompleted: true,
+      totalBalance: totalBalance,
     );
     await ref.read(settingsProvider.notifier).save(settings);
 

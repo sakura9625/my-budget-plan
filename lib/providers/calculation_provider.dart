@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
@@ -33,6 +34,7 @@ class GoalCalculation {
   final double displayAmount;
   final double overallProgress;
   final double planProgress;
+  final double plannedProgress;
   final PlanStatus planStatus;
   final double requiredMonthlyAmount;
   final int remainingMonths;
@@ -43,6 +45,7 @@ class GoalCalculation {
     required this.displayAmount,
     required this.overallProgress,
     required this.planProgress,
+    required this.plannedProgress,
     required this.planStatus,
     required this.requiredMonthlyAmount,
     required this.remainingMonths,
@@ -123,8 +126,10 @@ CalculationResult _calculate(
 
   double totalGoalAnnual = 0;
   for (final g in activeGoals) {
+    final totalM = _totalMonths(g.startYear, g.startMonth, g.endYear, g.endMonth);
+    if (totalM <= 0) continue;
     final months = _targetMonthsInYear(g.startYear, g.startMonth, g.endYear, g.endMonth, now.year);
-    final monthly = g.targetAmount / _totalMonths(g.startYear, g.startMonth, g.endYear, g.endMonth);
+    final monthly = g.targetAmount / totalM;
     totalGoalAnnual += monthly * months;
   }
 
@@ -134,12 +139,15 @@ CalculationResult _calculate(
     totalBudgetAnnual += b.monthlyAmount * months;
   }
 
+  // 年間自由枠は最低0（マイナスは警告表示用に保持）
   final annualFreeAmount = annualFreeMoney - totalGoalAnnual - totalBudgetAnnual;
-  final monthlyFreeAmount = annualFreeAmount / 12;
+  // 月間自由枠は年間自由枠を対象月数で割る（12固定ではなく残月数で割る）
+  final now2 = DateTime.now();
+  final remainingMonthsInYear = 13 - now2.month; // 今月含む残り月数
+  final monthlyFreeAmount = annualFreeAmount / remainingMonthsInYear;
 
-  // 最新レビューから実質残高を取得
-  final latestReview = reviews.isNotEmpty ? reviews.first : null;
-  final effectiveBalance = latestReview?.effectiveBalance ?? 0;
+  // 現在の総残高（アプリ全体で1つ。設定・レビューで共通利用）
+  final effectiveBalance = settings.totalBalance;
 
   // 目標配分可能額（マイナス許容）
   final allocatableAmount = effectiveBalance - monthlyFreeAmount;
@@ -151,7 +159,8 @@ CalculationResult _calculate(
   final goalCalculations = activeGoals.map((goal) {
     final ratio = totalGoalRemaining > 0 ? goal.remainingAmount / totalGoalRemaining : 0.0;
     final virtualAmount = allocatableAmount * ratio;
-    final displayAmount = goal.manualAmount + virtualAmount;
+    // 全体進捗は「現在の積立額 ÷ 目標額」。積立額は負にはならない（マイナスは0に床上げ）。
+    final displayAmount = (goal.manualAmount + virtualAmount).clamp(0.0, double.infinity);
     final overallProgress = goal.targetAmount > 0 ? displayAmount / goal.targetAmount : 0.0;
 
     // 残月数
@@ -163,11 +172,20 @@ CalculationResult _calculate(
     final remainingNeeded = (goal.targetAmount - displayAmount).clamp(0, double.infinity);
     final requiredMonthlyAmount = remainingNeeded / remainingMonths;
 
-    // 計画進捗
+    // 計画進捗 = 実際の進捗 ÷ 本来あるべき進捗（経過期間 ÷ 全期間、開始月を1ヶ月目として数える）
     final totalMonths = _totalMonths(goal.startYear, goal.startMonth, goal.endYear, goal.endMonth);
     final elapsedMonths = (nowMonthTotal - (goal.startYear * 12 + goal.startMonth) + 1).clamp(1, totalMonths);
     final plannedProgress = totalMonths > 0 ? elapsedMonths / totalMonths : 0.0;
-    final planProgress = plannedProgress > 0 ? overallProgress / plannedProgress : 0.0;
+    // 開始直後（本来あるべき進捗が極小）は比率が発散するため、表示・判定上は200%で上限を設ける。
+    final rawPlanProgress = plannedProgress > 0 ? overallProgress / plannedProgress : 0.0;
+    final planProgress = rawPlanProgress.clamp(0.0, 2.0);
+
+    debugPrint(
+      '[calculation_provider] goal="${goal.name}" totalMonths=$totalMonths '
+      'elapsedMonths=$elapsedMonths plannedProgress=$plannedProgress '
+      'overallProgress=$overallProgress rawPlanProgress=$rawPlanProgress '
+      'planProgress(clamped)=$planProgress',
+    );
 
     final planStatus = _toPlanStatus(planProgress);
 
@@ -177,6 +195,7 @@ CalculationResult _calculate(
       displayAmount: displayAmount,
       overallProgress: overallProgress,
       planProgress: planProgress,
+      plannedProgress: plannedProgress,
       planStatus: planStatus,
       requiredMonthlyAmount: requiredMonthlyAmount,
       remainingMonths: remainingMonths,
@@ -222,6 +241,23 @@ CalculationResult _calculate(
     overallPlanStatus,
     hasNoGoals,
   );
+
+  debugPrint(
+    '[calculation_provider] annualFreeMoney=$annualFreeMoney '
+    'totalGoalAnnual=$totalGoalAnnual totalBudgetAnnual=$totalBudgetAnnual '
+    'annualFreeAmount=$annualFreeAmount monthlyFreeAmount=$monthlyFreeAmount '
+    'effectiveBalance=$effectiveBalance allocatableAmount=$allocatableAmount '
+    'totalOverallProgress=$totalOverallProgress totalPlanProgress=$totalPlanProgress '
+    'overallPlanStatus=$overallPlanStatus',
+  );
+  for (final gc in goalCalculations) {
+    debugPrint(
+      '[calculation_provider] goal="${gc.goal.name}" manualAmount=${gc.goal.manualAmount} '
+      'virtualAmount=${gc.virtualAmount} displayAmount=${gc.displayAmount} '
+      'overallProgress=${gc.overallProgress} planProgress=${gc.planProgress} '
+      'planStatus=${gc.planStatus}',
+    );
+  }
 
   return CalculationResult(
     annualFreeMoney: annualFreeMoney,

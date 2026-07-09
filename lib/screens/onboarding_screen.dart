@@ -53,7 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           width: _currentPage == i ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentPage == i ? AppTheme.primary : Colors.grey.shade300,
+            color: _currentPage == i ? AppTheme.primary : Colors.white.withOpacity(0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         );
@@ -113,7 +113,7 @@ class _Page2 extends StatelessWidget {
           Text(
             '旅行、カメラ、貯蓄、推し活。\nお金を目的ごとに整理すると、\n「何に使っていいか」が見えるようになります。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textDark.withOpacity(0.7),
+                  color: Colors.white,
                   height: 1.8,
                 ),
           ),
@@ -146,10 +146,17 @@ class _Page2 extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppTheme.textDark)),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          child: Text(desc,
+              style: TextStyle(
+                  color: AppTheme.textDark.withOpacity(0.7),
+                  fontSize: 13)),
         ),
       ],
     );
@@ -172,7 +179,7 @@ class _Page2 extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(child: _diagramItem(context, 'プロジェクト', AppTheme.primary)),
               const SizedBox(width: 8),
-              Expanded(child: _diagramItem(context, '予算', AppTheme.accent)),
+              Expanded(child: _diagramItem(context, '予算', AppTheme.needsReview)),
               const SizedBox(width: 8),
               Expanded(child: _diagramItem(context, '自由枠', Colors.grey)),
             ],
@@ -223,7 +230,7 @@ class _Page3 extends StatelessWidget {
           Text(
             '今月は余裕があるのか。\n少し自粛した方がいいのか。\nホームを見れば、すぐに分かります。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textDark.withOpacity(0.7),
+                  color: Colors.white,
                   height: 1.8,
                 ),
           ),
@@ -245,7 +252,7 @@ class _Page3 extends StatelessWidget {
                 const Divider(height: 24),
                 _homeItem(context, '今月の自由枠', '82,000円', '余裕あり', AppTheme.success),
                 const SizedBox(height: 12),
-                _homeItem(context, '旅行', '順調', '60%', AppTheme.primary),
+                _homeItem(context, '旅行', '順調', '60%', AppTheme.onTrack),
                 const SizedBox(height: 12),
                 _homeItem(context, '推し活', '余裕あり', '32%', AppTheme.success),
               ],
@@ -261,7 +268,8 @@ class _Page3 extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        Text(label,
+            style: const TextStyle(color: AppTheme.textDark, fontSize: 14)),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -271,7 +279,7 @@ class _Page3 extends StatelessWidget {
                     color: color,
                     fontSize: 14)),
             Text(sub,
-                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
           ],
         ),
       ],
@@ -296,7 +304,7 @@ class _Page4 extends StatelessWidget {
           Text(
             '細かな家計簿は不要です。\n入力するのは、月に1回だけ。\n入力を忘れた月があっても、\n次回レビューで計画を調整できます。',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textDark.withOpacity(0.7),
+                  color: Colors.white,
                   height: 1.8,
                 ),
           ),
@@ -342,13 +350,13 @@ class _Page4 extends StatelessWidget {
           child: Center(
             child: Text(num,
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: AppTheme.navy,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
           ),
         ),
         const SizedBox(width: 12),
-        Text(label, style: Theme.of(context).textTheme.bodyLarge),
+        Text(label, style: const TextStyle(color: AppTheme.textDark, fontSize: 16)),
       ],
     );
   }
@@ -395,7 +403,7 @@ class _OnboardingPage extends StatelessWidget {
           Text(
             body,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textDark.withOpacity(0.7),
+                  color: Colors.white,
                   height: 1.8,
                 ),
           ),
@@ -404,7 +412,7 @@ class _OnboardingPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.08),
+                color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
