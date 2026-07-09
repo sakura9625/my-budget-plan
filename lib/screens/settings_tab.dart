@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/app_settings.dart';
 import '../providers/settings_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
@@ -41,7 +42,17 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    // 他画面（レビュー）でtotalBalanceが更新された場合も表示を同期する
+    ref.listen<AppSettings?>(settingsProvider, (previous, next) {
+      if (next == null) return;
+      final text = next.totalBalance.toStringAsFixed(0);
+      if (_totalBalanceController.text != text) {
+        _totalBalanceController.text = text;
+      }
+    });
+
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('設定')),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -242,7 +253,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         TextField(
           controller: controller,
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
           onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => FocusScope.of(context).unfocus(),
           decoration: const InputDecoration(suffixText: '万円'),
         ),
       ],
@@ -262,6 +275,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Future<void> _saveIncome() async {
+    FocusScope.of(context).unfocus();
     final settings = ref.read(settingsProvider);
     if (settings == null) return;
     final income = double.tryParse(_incomeController.text) ?? 0;
@@ -281,6 +295,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Future<void> _saveTotalBalance() async {
+    FocusScope.of(context).unfocus();
     final settings = ref.read(settingsProvider);
     if (settings == null) return;
     settings.totalBalance = double.tryParse(_totalBalanceController.text) ?? 0;
@@ -292,6 +307,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Future<void> _saveReviewDay() async {
+    FocusScope.of(context).unfocus();
     final settings = ref.read(settingsProvider);
     if (settings == null) return;
     settings.reviewDay = _reviewDay;

@@ -21,6 +21,7 @@ class HomeTab extends ConsumerWidget {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('My Budget Plan'),
       ),

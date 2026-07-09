@@ -31,6 +31,7 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
     final now = DateTime.now();
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('レビュー')),
       body: ListView(
         padding: const EdgeInsets.all(16),

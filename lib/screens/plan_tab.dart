@@ -37,6 +37,7 @@ class _PlanTabState extends ConsumerState<PlanTab>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('計画'),
         bottom: TabBar(
