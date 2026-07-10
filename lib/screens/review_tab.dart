@@ -504,6 +504,11 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
   }
 
   Widget _buildBudgetInput(budget) {
+    final calc = ref.read(calculationProvider);
+    final bc = calc?.budgetCalculations
+        .where((c) => c.budget.id == budget.id)
+        .firstOrNull;
+    final monthlyAmount = bc?.currentMonthlyAmount ?? budget.monthlyAmount;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -523,7 +528,7 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, color: AppTheme.textDark)),
               const Spacer(),
-              Text('月額 ${Formatter.man(budget.monthlyAmount)}',
+              Text('月額 ${Formatter.man(monthlyAmount)}',
                   style: const TextStyle(
                       color: Color(0xFF6B7280), fontSize: 12)),
             ],

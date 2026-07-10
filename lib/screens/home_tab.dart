@@ -113,9 +113,9 @@ class HomeTab extends ConsumerWidget {
       ),
       child: Text(
         '[DEBUG] 原資の健全性: $label '
-        '(残高${Formatter.man(calc.totalBalance)} / '
-        '予算${Formatter.man(calc.affordBudget)}+プロジェクト${Formatter.man(calc.affordProject)}'
-        '=${Formatter.man(calc.affordBudget + calc.affordProject)})',
+        '(①動かせる金${Formatter.man(calc.movableFunds)} / 残高${Formatter.man(calc.totalBalance)} / '
+        '②予算${Formatter.man(calc.affordBudget)}+③プロジェクト${Formatter.man(calc.affordProject)}'
+        '=${Formatter.man(calc.affordBudget + calc.affordProject)} / ④自由枠${Formatter.man(calc.monthlyFreeAmount)})',
         style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),
     );
@@ -209,7 +209,7 @@ class HomeTab extends ConsumerWidget {
                     Text(b.budget.name,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                    Text('月額 ${Formatter.man(b.budget.monthlyAmount)}',
+                    Text('月額 ${Formatter.man(b.currentMonthlyAmount)}',
                         style: const TextStyle(
                             color: Color(0xFF6B7280), fontSize: 12)),
                   ],

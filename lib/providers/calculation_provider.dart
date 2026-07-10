@@ -66,14 +66,21 @@ class BudgetCalculation {
   final double usageRate;
   final BudgetStatus status;
   final double remainingAmount;
+  final int remainingMonths;
+  final double currentMonthlyAmount;
 
   BudgetCalculation({
     required this.budget,
     required this.usageRate,
     required this.status,
     required this.remainingAmount,
+    required this.remainingMonths,
+    required this.currentMonthlyAmount,
   });
 }
+
+// 年間の額を月額に均す共通関数（月間自由枠の算出で使用、12固定）
+double monthlyFromAnnual(double annualAmount) => annualAmount / 12;
 
 // 全体計算結果
 class CalculationResult {
@@ -82,6 +89,7 @@ class CalculationResult {
   final double annualFreeAmount;
   final double monthlyFreeAmount;
   final double allocatableAmount;
+  final double movableFunds;
   final List<GoalCalculation> goalCalculations;
   final List<BudgetCalculation> budgetCalculations;
   final double totalOverallProgress;
@@ -100,6 +108,7 @@ class CalculationResult {
     required this.annualFreeAmount,
     required this.monthlyFreeAmount,
     required this.allocatableAmount,
+    required this.movableFunds,
     required this.goalCalculations,
     required this.budgetCalculations,
     required this.totalOverallProgress,
@@ -132,6 +141,7 @@ CalculationResult _calculate(
   List<Review> reviews,
 ) {
   final now = DateTime.now();
+  final nowMonthTotal = now.year * 12 + now.month;
 
   // 年間自由資金
   final annualFreeMoney = settings.annualFreeMoney;
@@ -157,48 +167,95 @@ CalculationResult _calculate(
 
   // 年間自由枠は最低0（マイナスは警告表示用に保持）
   final annualFreeAmount = annualFreeMoney - totalGoalAnnual - totalBudgetAnnual;
-  // 月間自由枠は年間自由枠を対象月数で割る（12固定ではなく残月数で割る）
-  final now2 = DateTime.now();
-  final remainingMonthsInYear = 13 - now2.month; // 今月含む残り月数
-  final monthlyFreeAmount = annualFreeAmount / remainingMonthsInYear;
+  // ④月間自由枠は年間自由枠を12で割る
+  final monthlyFreeAmount = monthlyFromAnnual(annualFreeAmount);
 
   // 現在の総残高（アプリ全体で1つ。設定・レビューで共通利用）
   final effectiveBalance = settings.totalBalance;
 
-  // 目標配分可能額（マイナス許容）
-  final allocatableAmount = effectiveBalance - monthlyFreeAmount;
+  // Budget計算（②予算月額＝残額を残月数で繰り越し配分した値）
+  final budgetCalculations = budgets.map((budget) {
+    final usageRate = budget.usageRate;
+    final status = _toBudgetStatus(usageRate);
+    final remainingAmount = budget.plannedAmount - budget.usedAmount;
+    final budgetEndMonthTotal = budget.endYear * 12 + budget.endMonth;
+    final remainingMonths = (budgetEndMonthTotal - nowMonthTotal + 1).clamp(1, 9999);
+    final currentMonthlyAmount = (remainingAmount / remainingMonths).clamp(0.0, double.infinity);
+    return BudgetCalculation(
+      budget: budget,
+      usageRate: usageRate,
+      status: status,
+      remainingAmount: remainingAmount,
+      remainingMonths: remainingMonths,
+      currentMonthlyAmount: currentMonthlyAmount,
+    );
+  }).toList();
 
-  // Goal残額合計
-  final totalGoalRemaining = activeGoals.fold(0.0, (sum, g) => sum + g.remainingAmount);
+  // ②予算月額の合計（原資判定・PJT配分ポットの両方で使う。期間終了済みの予算は除外）
+  double affordBudget = 0;
+  for (final bc in budgetCalculations) {
+    final rawRemaining =
+        (bc.budget.endYear * 12 + bc.budget.endMonth) - nowMonthTotal + 1;
+    if (rawRemaining <= 0) continue; // 期間終了済みの予算は除外
+    affordBudget += bc.currentMonthlyAmount;
+  }
 
-  // Goal計算
-  final goalCalculations = activeGoals.map((goal) {
-    final ratio = totalGoalRemaining > 0 ? goal.remainingAmount / totalGoalRemaining : 0.0;
-    final virtualAmount = allocatableAmount * ratio;
-    // 全体進捗は「現在の積立額 ÷ 目標額」。積立額は負にはならない（マイナスは0に床上げ）。
-    final displayAmount = (goal.manualAmount + virtualAmount).clamp(0.0, double.infinity);
-    final overallProgress = goal.targetAmount > 0 ? displayAmount / goal.targetAmount : 0.0;
-
-    // 残月数
-    final endMonthTotal = goal.endYear * 12 + goal.endMonth;
-    final nowMonthTotal = now.year * 12 + now.month;
-    final remainingMonths = (endMonthTotal - nowMonthTotal + 1).clamp(1, 9999);
-
-    // 必要月額
-    final remainingNeeded = (goal.targetAmount - displayAmount).clamp(0, double.infinity);
-    final requiredMonthlyAmount = remainingNeeded / remainingMonths;
-
-    // 計画進捗 = 実際の進捗 ÷ 本来あるべき進捗（経過期間 ÷ 全期間、開始月を1ヶ月目として数える）
+  // Goal計算 第1段：配分（ratio/pot）に依存しない値を先に確定する
+  // ③PJT必要月額＝(目標−確保済み)÷残月数、PJT積立分＝目標÷全期間月数×経過月数
+  final goalIntermediates = activeGoals.map((goal) {
     final totalMonths = _totalMonths(goal.startYear, goal.startMonth, goal.endYear, goal.endMonth);
-    final elapsedMonths = (nowMonthTotal - (goal.startYear * 12 + goal.startMonth) + 1).clamp(1, totalMonths);
+    final endMonthTotal = goal.endYear * 12 + goal.endMonth;
+    final remainingMonths = (endMonthTotal - nowMonthTotal + 1).clamp(1, 9999);
+    // 開始/終了設定が不正（totalMonths<=0）でも落ちないよう経過月数をガードする
+    final elapsedMonths = totalMonths > 0
+        ? (nowMonthTotal - (goal.startYear * 12 + goal.startMonth) + 1).clamp(1, totalMonths)
+        : 1;
+    final remainingNeeded = (goal.targetAmount - goal.manualAmount).clamp(0, double.infinity);
+    final requiredMonthlyAmount = remainingNeeded / remainingMonths;
+    final pjtAccumulated =
+        totalMonths > 0 ? goal.targetAmount / totalMonths * elapsedMonths : 0.0;
     final plannedProgress = totalMonths > 0 ? elapsedMonths / totalMonths : 0.0;
+    return (
+      goal: goal,
+      totalMonths: totalMonths,
+      remainingMonths: remainingMonths,
+      requiredMonthlyAmount: requiredMonthlyAmount,
+      pjtAccumulated: pjtAccumulated,
+      plannedProgress: plannedProgress,
+    );
+  }).toList();
+
+  // ①動かせる金＝総残高−Σ(PJT積立分)＋Σ(確保済み)（全アクティブGoal合計）
+  final sumPjtAccumulated = goalIntermediates.fold(0.0, (sum, gi) => sum + gi.pjtAccumulated);
+  final sumManualAmount = activeGoals.fold(0.0, (sum, g) => sum + g.manualAmount);
+  final movableFunds = effectiveBalance - sumPjtAccumulated + sumManualAmount;
+
+  // pot＝①−④−②（PJTに回せる総額。マイナスもあり得る）
+  final goalAllocatablePot = movableFunds - monthlyFreeAmount - affordBudget;
+
+  // 比率(各Goal)＝requiredMonthlyAmount÷Σ(全activeGoalのrequiredMonthlyAmount)
+  final sumRequiredMonthly =
+      goalIntermediates.fold(0.0, (sum, gi) => sum + gi.requiredMonthlyAmount);
+
+  // Goal計算 第2段：potを比率配分し、全体進捗などを確定する
+  final goalCalculations = goalIntermediates.map((gi) {
+    final goal = gi.goal;
+    final ratio = sumRequiredMonthly > 0 ? gi.requiredMonthlyAmount / sumRequiredMonthly : 0.0;
+    final virtualAmount = goalAllocatablePot * ratio;
+    // 全体進捗の算出には床上げしない実額を使う（マイナス・200%超を許容、クランプしない）
+    final rawAmount = goal.manualAmount + virtualAmount;
+    // 表示用の積立額（金額表示）は0未満を床上げする
+    final displayAmount = rawAmount.clamp(0.0, double.infinity);
+    final overallProgress = goal.targetAmount > 0 ? rawAmount / goal.targetAmount : 0.0;
+
+    // 計画進捗 = 実際の進捗 ÷ 本来あるべき進捗
+    final rawPlanProgress = gi.plannedProgress > 0 ? overallProgress / gi.plannedProgress : 0.0;
     // 開始直後（本来あるべき進捗が極小）は比率が発散するため、表示・判定上は200%で上限を設ける。
-    final rawPlanProgress = plannedProgress > 0 ? overallProgress / plannedProgress : 0.0;
     final planProgress = rawPlanProgress.clamp(0.0, 2.0);
 
     debugPrint(
-      '[calculation_provider] goal="${goal.name}" totalMonths=$totalMonths '
-      'elapsedMonths=$elapsedMonths plannedProgress=$plannedProgress '
+      '[calculation_provider] goal="${goal.name}" totalMonths=${gi.totalMonths} '
+      'plannedProgress=${gi.plannedProgress} '
       'overallProgress=$overallProgress rawPlanProgress=$rawPlanProgress '
       'planProgress(clamped)=$planProgress',
     );
@@ -211,27 +268,14 @@ CalculationResult _calculate(
       displayAmount: displayAmount,
       overallProgress: overallProgress,
       planProgress: planProgress,
-      plannedProgress: plannedProgress,
+      plannedProgress: gi.plannedProgress,
       planStatus: planStatus,
-      requiredMonthlyAmount: requiredMonthlyAmount,
-      remainingMonths: remainingMonths,
+      requiredMonthlyAmount: gi.requiredMonthlyAmount,
+      remainingMonths: gi.remainingMonths,
     );
   }).toList();
 
-  // Budget計算
-  final budgetCalculations = budgets.map((budget) {
-    final usageRate = budget.usageRate;
-    final status = _toBudgetStatus(usageRate);
-    final remainingAmount = budget.plannedAmount - budget.usedAmount;
-    return BudgetCalculation(
-      budget: budget,
-      usageRate: usageRate,
-      status: status,
-      remainingAmount: remainingAmount,
-    );
-  }).toList();
-
-  // 全体進捗
+  // 全体進捗（表示用。床上げ済みdisplayAmountを使う）
   final totalTarget = activeGoals.fold(0.0, (sum, g) => sum + g.targetAmount);
   final totalDisplay = goalCalculations.fold(0.0, (sum, gc) => sum + gc.displayAmount);
   final totalOverallProgress = totalTarget > 0 ? totalDisplay / totalTarget : 0.0;
@@ -245,23 +289,21 @@ CalculationResult _calculate(
 
   final overallPlanStatus = hasNoGoals ? null : _toPlanStatus(totalPlanProgress);
 
-  // 原資の健全性判定（口座残高で予算・プロジェクトの今月分をまかなえるか）
-  final affordBudget = budgets.fold(0.0, (sum, b) => sum + b.monthlyAmount);
-  final nowMonthTotalForAfford = now.year * 12 + now.month;
+  // ③PJT必要月額の合計（期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外）
   double affordProject = 0;
   for (final gc in goalCalculations) {
     final rawRemaining =
-        (gc.goal.endYear * 12 + gc.goal.endMonth) - nowMonthTotalForAfford + 1;
-    if (rawRemaining <= 0) continue; // 期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外
+        (gc.goal.endYear * 12 + gc.goal.endMonth) - nowMonthTotal + 1;
+    if (rawRemaining <= 0) continue;
     affordProject += gc.requiredMonthlyAmount;
   }
-  final buffer = settings.buffer;
+  // 原資の健全性判定（①動かせる金で②③（＋④）をまかなえるか）
   final affordabilityStatus = _toAffordabilityStatus(
-      effectiveBalance, affordBudget, affordProject, buffer);
+      movableFunds, affordBudget, affordProject, monthlyFreeAmount);
 
   debugPrint(
-    '[calculation_provider] affordability balance=$effectiveBalance '
-    'affordBudget=$affordBudget affordProject=$affordProject buffer=$buffer '
+    '[calculation_provider] affordability movableFunds=$movableFunds '
+    'affordBudget=$affordBudget affordProject=$affordProject monthlyFreeAmount=$monthlyFreeAmount '
     'status=$affordabilityStatus',
   );
 
@@ -282,7 +324,7 @@ CalculationResult _calculate(
     '[calculation_provider] annualFreeMoney=$annualFreeMoney '
     'totalGoalAnnual=$totalGoalAnnual totalBudgetAnnual=$totalBudgetAnnual '
     'annualFreeAmount=$annualFreeAmount monthlyFreeAmount=$monthlyFreeAmount '
-    'effectiveBalance=$effectiveBalance allocatableAmount=$allocatableAmount '
+    'effectiveBalance=$effectiveBalance movableFunds=$movableFunds goalAllocatablePot=$goalAllocatablePot '
     'totalOverallProgress=$totalOverallProgress totalPlanProgress=$totalPlanProgress '
     'overallPlanStatus=$overallPlanStatus',
   );
@@ -300,7 +342,8 @@ CalculationResult _calculate(
     monthlyFreeMoney: monthlyFreeMoney,
     annualFreeAmount: annualFreeAmount,
     monthlyFreeAmount: monthlyFreeAmount,
-    allocatableAmount: allocatableAmount,
+    allocatableAmount: goalAllocatablePot,
+    movableFunds: movableFunds,
     goalCalculations: goalCalculations,
     budgetCalculations: budgetCalculations,
     totalOverallProgress: totalOverallProgress,
@@ -324,15 +367,21 @@ PlanStatus _toPlanStatus(double planProgress) {
   return PlanStatus.difficult;
 }
 
-// 原資の健全性判定：口座残高が「予算＋プロジェクトの今月分必要額」を
-// まかなえているかを見る、残高ベースの独立した判定（予算バッジの利用率判定とは無関係）。
-AffordStatus? _toAffordabilityStatus(double balance, double affordBudget,
-    double affordProject, double buffer) {
+// 原資の健全性判定：①動かせる金で「②予算月額＋③PJT必要月額」（＋④月間自由枠）を
+// まかなえているかを見る、独立した判定（予算バッジの利用率判定とは無関係）。
+// 各分岐は設計マトリクスのIFS条件を丸めずそのまま実装している（等号の向きに注意）。
+AffordStatus? _toAffordabilityStatus(double movableFunds, double affordBudget,
+    double affordProject, double monthlyFreeAmount) {
   if (affordBudget <= 0 && affordProject <= 0) return null; // 予算・プロジェクトが0件
   final total = affordBudget + affordProject;
-  if (balance >= total + buffer) return AffordStatus.comfortable;
-  if (balance >= total) return AffordStatus.ok;
-  if (balance >= affordBudget) return AffordStatus.tight;
+  final comfortable = movableFunds - total > monthlyFreeAmount;
+  final ok = movableFunds - affordBudget > monthlyFreeAmount &&
+      movableFunds - total < monthlyFreeAmount;
+  final tight = movableFunds > affordBudget &&
+      movableFunds - affordBudget < monthlyFreeAmount;
+  if (comfortable) return AffordStatus.comfortable;
+  if (ok) return AffordStatus.ok;
+  if (tight) return AffordStatus.tight;
   return AffordStatus.critical;
 }
 

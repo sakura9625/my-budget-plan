@@ -8,6 +8,7 @@ import '../models/budget.dart';
 import '../providers/settings_provider.dart';
 import '../providers/goal_provider.dart';
 import '../providers/budget_provider.dart';
+import '../providers/calculation_provider.dart' show monthlyFromAnnual;
 import '../theme.dart';
 import '../utils/formatter.dart';
 
@@ -47,7 +48,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     return income - fixed;
   }
 
-  double get _monthlyFreeMoney => _annualFreeMoney / 12;
+  double get _monthlyFreeMoney => monthlyFromAnnual(_annualFreeMoney);
 
   final _stepTitles = [
     '収入・固定費',
@@ -307,7 +308,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     }
 
     final annualFreeAmount = annualFree - totalGoal - totalBudget;
-    final monthlyFreeAmount = annualFreeAmount / 12;
+    final monthlyFreeAmount = monthlyFromAnnual(annualFreeAmount);
     final isNegative = annualFreeAmount < 0;
 
     return SingleChildScrollView(

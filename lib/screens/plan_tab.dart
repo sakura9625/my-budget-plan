@@ -883,7 +883,7 @@ class _BudgetCard extends ConsumerWidget {
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                     Text(
-                      '月額 ${Formatter.man(budget.monthlyAmount)} / ${budget.endYear}年${budget.endMonth}月まで',
+                      '月額 ${Formatter.man(calc?.currentMonthlyAmount ?? budget.monthlyAmount)} / ${budget.endYear}年${budget.endMonth}月まで',
                       style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
                     ),
                   ],
