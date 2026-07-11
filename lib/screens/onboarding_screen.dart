@@ -13,14 +13,30 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
+  late final List<Widget> _pages;
 
-  final _pages = const [
-    _Page1(),
-    _Page2(),
-    _Page3(),
-    _Page4(),
-    _Page5(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      _Page1(onNext: _goNext),
+      _Page2(onNext: _goNext),
+      _Page3(onNext: _goNext),
+      _Page4(onNext: _goNext),
+      _Page5(onNext: _goNext),
+    ];
+  }
+
+  void _goNext() {
+    if (_currentPage == _pages.length - 1) {
+      context.go('/setup');
+    } else {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +44,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            const SizedBox(height: 12),
+            _buildIndicator(),
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -35,9 +53,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: _pages,
               ),
             ),
-            _buildIndicator(),
-            _buildButton(),
-            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -54,54 +69,57 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           width: _currentPage == i ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentPage == i ? AppTheme.primary : Colors.white.withOpacity(0.3),
+            color: _currentPage == i
+                ? AppTheme.primary
+                : Colors.white.withOpacity(0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         );
       }),
     );
   }
+}
 
-  Widget _buildButton() {
-    final isLast = _currentPage == _pages.length - 1;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      child: ElevatedButton(
-        onPressed: () {
-          if (isLast) {
-            context.go('/setup');
-          } else {
-            _pageController.nextPage(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          }
-        },
-        child: Text(isLast ? '年間予算を作る' : '次へ'),
-      ),
+// ページ内埋め込み用の共通「次へ」ボタン。キャラ画像の下に置き、
+// コンテンツの一部としてスクロールに含める（固定表示にしない）。
+class _NextButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onNext;
+  const _NextButton({required this.label, required this.onNext});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onNext,
+      child: Text(label),
     );
   }
 }
 
 class _Page1 extends StatelessWidget {
-  const _Page1();
+  final VoidCallback onNext;
+  const _Page1({required this.onNext});
 
   @override
   Widget build(BuildContext context) {
     return _OnboardingPage(
       emoji: '😔',
-      title: 'お金のこと、こんなふうに\n思ったことはありませんか？',
+      title: 'お金のこと、こんなふうに思ったことはありませんか？',
       body: 'もっと貯金したい。\n趣味にもお金を使いたい。\n今月あといくら使っていいか分からない。\n\nでも、家計簿は続かない。',
-      supplement: 'このアプリは、毎月1回・3つの入力だけで、\nあなたのお金の計画をサポートします。',
+      supplement: 'このアプリは、毎月1回・3つの入力だけで、あなたのお金の計画をサポートします。',
       prominentSupplement: true,
       pigAsset: 'pig_bank_cute.png',
       pigComment: 'それは助かる！めんどくさがりのボクにぴったりだ！',
+      topSpacing: 0,
+      onNext: onNext,
+      buttonLabel: '次へ',
     );
   }
 }
 
 class _Page2 extends StatelessWidget {
-  const _Page2();
+  final VoidCallback onNext;
+  const _Page2({required this.onNext});
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +166,9 @@ class _Page2 extends StatelessWidget {
               text: 'なんでもかんでも登録すると失敗するから特別なやつだけ登録するんだぜ',
             ),
           ),
+          const SizedBox(height: 32),
+          _NextButton(label: '次へ', onNext: onNext),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -166,8 +187,7 @@ class _Page2 extends StatelessWidget {
         Expanded(
           child: Text(desc,
               style: TextStyle(
-                  color: AppTheme.textDark.withOpacity(0.7),
-                  fontSize: 13)),
+                  color: AppTheme.textDark.withOpacity(0.7), fontSize: 13)),
         ),
       ],
     );
@@ -188,9 +208,11 @@ class _Page2 extends StatelessWidget {
             children: [
               Expanded(child: _diagramItem(context, '貯蓄', AppTheme.success)),
               const SizedBox(width: 8),
-              Expanded(child: _diagramItem(context, 'プロジェクト', AppTheme.primary)),
+              Expanded(
+                  child: _diagramItem(context, 'プロジェクト', AppTheme.primary)),
               const SizedBox(width: 8),
-              Expanded(child: _diagramItem(context, '予算', AppTheme.needsReview)),
+              Expanded(
+                  child: _diagramItem(context, '予算', AppTheme.needsReview)),
               const SizedBox(width: 8),
               Expanded(child: _diagramItem(context, '自由枠', Colors.grey)),
             ],
@@ -225,7 +247,8 @@ class _Page2 extends StatelessWidget {
 }
 
 class _Page3 extends StatelessWidget {
-  const _Page3();
+  final VoidCallback onNext;
+  const _Page3({required this.onNext});
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +284,8 @@ class _Page3 extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
                 const Divider(height: 24),
-                _homeItem(context, '今月の自由枠', '82,000円', '余裕あり', AppTheme.success),
+                _homeItem(
+                    context, '今月の自由枠', '82,000円', '余裕あり', AppTheme.success),
                 const SizedBox(height: 12),
                 _homeItem(context, '旅行', '順調', '60%', AppTheme.onTrack),
                 const SizedBox(height: 12),
@@ -276,13 +300,16 @@ class _Page3 extends StatelessWidget {
               text: 'おお！これは分かりやすい！',
             ),
           ),
+          const SizedBox(height: 32),
+          _NextButton(label: '次へ', onNext: onNext),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _homeItem(BuildContext context, String label, String value,
-      String sub, Color color) {
+  Widget _homeItem(BuildContext context, String label, String value, String sub,
+      Color color) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -293,9 +320,7 @@ class _Page3 extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    fontSize: 14)),
+                    fontWeight: FontWeight.bold, color: color, fontSize: 14)),
             Text(sub,
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
           ],
@@ -306,7 +331,8 @@ class _Page3 extends StatelessWidget {
 }
 
 class _Page4 extends StatelessWidget {
-  const _Page4();
+  final VoidCallback onNext;
+  const _Page4({required this.onNext});
 
   @override
   Widget build(BuildContext context) {
@@ -361,6 +387,7 @@ class _Page4 extends StatelessWidget {
                   text: 'うんうん♪',
                   imageSize: 76,
                   fontSize: 12,
+                  flipImage: true,
                 ),
               ),
               SizedBox(width: 8),
@@ -374,6 +401,9 @@ class _Page4 extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 32),
+          _NextButton(label: '次へ', onNext: onNext),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -398,23 +428,28 @@ class _Page4 extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Text(label, style: const TextStyle(color: AppTheme.textDark, fontSize: 16)),
+        Text(label,
+            style: const TextStyle(color: AppTheme.textDark, fontSize: 16)),
       ],
     );
   }
 }
 
 class _Page5 extends StatelessWidget {
-  const _Page5();
+  final VoidCallback onNext;
+  const _Page5({required this.onNext});
 
   @override
   Widget build(BuildContext context) {
     return _OnboardingPage(
       emoji: '🎯',
       title: 'あなた専用の\n年間予算を作りましょう',
-      body: '年間手取り、固定費、貯蓄目標、\nプロジェクト、予算を登録すると、\n\n毎月あといくら使えるか、\n目標を達成できそうかを\n確認できるようになります。',
+      body:
+          '年間手取り、固定費、貯蓄目標、\nプロジェクト、予算を登録すると、\n\n毎月あといくら使えるか、\n目標を達成できそうかを\n確認できるようになります。',
       pigAsset: 'pig_bank_rich.png',
       pigComment: 'オレさまは家計簿を振り返るためにつけるんじゃねぇ。攻めるために使うんだぜ',
+      onNext: onNext,
+      buttonLabel: '年間予算を作る',
     );
   }
 }
@@ -427,6 +462,9 @@ class _OnboardingPage extends StatelessWidget {
   final bool prominentSupplement;
   final String? pigAsset;
   final String? pigComment;
+  final double topSpacing;
+  final VoidCallback onNext;
+  final String buttonLabel;
 
   const _OnboardingPage({
     required this.emoji,
@@ -436,6 +474,9 @@ class _OnboardingPage extends StatelessWidget {
     this.prominentSupplement = false,
     this.pigAsset,
     this.pigComment,
+    this.topSpacing = 24,
+    required this.onNext,
+    required this.buttonLabel,
   });
 
   @override
@@ -445,7 +486,7 @@ class _OnboardingPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 24),
+          SizedBox(height: topSpacing),
           Text(emoji, style: const TextStyle(fontSize: 56)),
           const SizedBox(height: 24),
           Text(title, style: Theme.of(context).textTheme.displayLarge),
@@ -485,6 +526,9 @@ class _OnboardingPage extends StatelessWidget {
             const SizedBox(height: 32),
             Center(child: PigWithSpeech(asset: pigAsset!, text: pigComment!)),
           ],
+          const SizedBox(height: 32),
+          _NextButton(label: buttonLabel, onNext: onNext),
+          const SizedBox(height: 24),
         ],
       ),
     );

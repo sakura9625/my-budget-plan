@@ -73,9 +73,7 @@ class _GoalList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goals = ref.watch(goalProvider)
-        .where((g) => g.type == type)
-        .toList();
+    final goals = ref.watch(goalProvider).where((g) => g.type == type).toList();
     final calc = ref.watch(calculationProvider);
 
     return PigBackgroundBody(
@@ -122,8 +120,7 @@ class _GoalList extends ConsumerWidget {
 
   void _showGoalDialog(BuildContext context, WidgetRef ref, GoalType type,
       {Goal? existing}) {
-    final nameController =
-        TextEditingController(text: existing?.name ?? '');
+    final nameController = TextEditingController(text: existing?.name ?? '');
     final amountController = TextEditingController(
         text: existing?.targetAmount.toStringAsFixed(0) ?? '');
     final now = DateTime.now();
@@ -140,110 +137,124 @@ class _GoalList extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit
-                    ? (type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集')
-                    : (type == GoalType.saving ? '貯蓄を追加' : 'プロジェクトを追加'),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: AppTheme.textDark),
-              ),
-              if (type == GoalType.project) ...[
-                const SizedBox(height: 4),
-                const Text(
-                  '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  hintText: type == GoalType.saving ? '例：老後資金' : '例：モルディブ旅行',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: type == GoalType.saving ? '目標金額（万円）' : '目標総額（万円）',
-                  suffixText: type == GoalType.saving ? '万円' : '万円（総額）',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '開始',
-                      year: startYear,
-                      month: startMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { startYear = y; startMonth = m; }),
+                  Text(
+                    isEdit
+                        ? (type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集')
+                        : (type == GoalType.saving ? '貯蓄を追加' : 'プロジェクトを追加'),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: AppTheme.textDark),
+                  ),
+                  if (type == GoalType.project) ...[
+                    const SizedBox(height: 4),
+                    const Text(
+                      '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
+                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText:
+                          type == GoalType.saving ? '例：老後資金' : '例：モルディブ旅行',
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '終了',
-                      year: endYear,
-                      month: endMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { endYear = y; endMonth = m; }),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText:
+                          type == GoalType.saving ? '目標金額（万円）' : '目標総額（万円）',
+                      suffixText: type == GoalType.saving ? '万円' : '万円（総額）',
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '開始',
+                          year: startYear,
+                          month: startMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '終了',
+                          year: endYear,
+                          month: endMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+
+                      if (isEdit) {
+                        existing!.name = name;
+                        existing.targetAmount = amount;
+                        existing.startYear = startYear;
+                        existing.startMonth = startMonth;
+                        existing.endYear = endYear;
+                        existing.endMonth = endMonth;
+                        await ref.read(goalProvider.notifier).update(existing);
+                      } else {
+                        await ref.read(goalProvider.notifier).add(Goal(
+                              id: const Uuid().v4(),
+                              type: type,
+                              name: name,
+                              targetAmount: amount,
+                              startYear: startYear,
+                              startMonth: startMonth,
+                              endYear: endYear,
+                              endMonth: endMonth,
+                              emoji: type == GoalType.saving ? '💰' : '🎯',
+                              createdAt: DateTime.now(),
+                            ));
+                      }
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: Text(isEdit ? '保存' : '追加'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  final amount =
-                      double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-
-                  if (isEdit) {
-                    existing!.name = name;
-                    existing.targetAmount = amount;
-                    existing.startYear = startYear;
-                    existing.startMonth = startMonth;
-                    existing.endYear = endYear;
-                    existing.endMonth = endMonth;
-                    await ref.read(goalProvider.notifier).update(existing);
-                  } else {
-                    await ref.read(goalProvider.notifier).add(Goal(
-                          id: const Uuid().v4(),
-                          type: type,
-                          name: name,
-                          targetAmount: amount,
-                          startYear: startYear,
-                          startMonth: startMonth,
-                          endYear: endYear,
-                          endMonth: endMonth,
-                          emoji: type == GoalType.saving ? '💰' : '🎯',
-                          createdAt: DateTime.now(),
-                        ));
-                  }
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: Text(isEdit ? '保存' : '追加'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -260,15 +271,13 @@ class _GoalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = calc != null
-        ? AppTheme.planStatusColor(calc!.planStatus)
-        : Colors.grey;
+    final color =
+        calc != null ? AppTheme.planStatusColor(calc!.planStatus) : Colors.grey;
     final bgColor = calc != null
         ? AppTheme.planStatusBgColor(calc!.planStatus)
         : const Color(0xFFF5F5F5);
-    final label = calc != null
-        ? AppTheme.planStatusLabel(calc!.planStatus)
-        : '-';
+    final label =
+        calc != null ? AppTheme.planStatusLabel(calc!.planStatus) : '-';
     final progress = (calc?.overallProgress ?? 0).clamp(0.0, 1.0);
     final entries = ref.watch(manualEntryProvider.notifier).forGoal(goal.id);
 
@@ -285,8 +294,7 @@ class _GoalCard extends ConsumerWidget {
           // ヘッダー
           Row(
             children: [
-              Text(goal.emoji ?? '🎯',
-                  style: const TextStyle(fontSize: 22)),
+              Text(goal.emoji ?? '🎯', style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -294,16 +302,19 @@ class _GoalCard extends ConsumerWidget {
                   children: [
                     Text(goal.name,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark)),
                     Text(
                       '目標 ${Formatter.man(goal.targetAmount)} / ${goal.endYear}年${goal.endMonth}月',
-                      style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                      style: const TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 12),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(20),
@@ -332,7 +343,8 @@ class _GoalCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('手入力 ${Formatter.man(goal.manualAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               Text(
                 '進捗 ${((calc?.overallProgress ?? 0) * 100).toStringAsFixed(0)}%',
                 style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
@@ -363,12 +375,9 @@ class _GoalCard extends ConsumerWidget {
             const Divider(height: 1),
             const SizedBox(height: 8),
             Text('確保履歴',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF6B7280))),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF6B7280))),
             const SizedBox(height: 4),
             ...entries.take(3).map((e) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
@@ -377,8 +386,8 @@ class _GoalCard extends ConsumerWidget {
                     children: [
                       Text(
                         '${e.date.year}/${e.date.month}/${e.date.day}${e.memo != null ? ' · ${e.memo}' : ''}',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                       Text(Formatter.man(e.amount),
                           style: const TextStyle(
@@ -435,71 +444,81 @@ class _GoalCard extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.only(
-          left: 24, right: 24, top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('確保済み金額を入力',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: AppTheme.textDark)),
-            const SizedBox(height: 8),
-            Text(
-              '実際に別口座へ移した・支払った金額を入力してください。',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: const Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                  hintText: '例：10', suffixText: '万円'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: memoController,
-              decoration:
-                  const InputDecoration(hintText: 'メモ（任意）'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final amount =
-                    double.tryParse(amountController.text) ?? 0;
-                if (amount <= 0) return;
+      // sheetContextを使うことで、キーボードの開閉（MediaQuery.viewInsets変化）に
+      // 追従してこのシート自身が再ビルドされ、下部余白が正しく更新される。
+      // 外側のcontextを使うと、キーボードが開いてもシートの余白が更新されず
+      // 入力欄・ボタンがキーボードに隠れて操作できなくなる。
+      builder: (sheetContext) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(sheetContext).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('確保済み金額を入力',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: AppTheme.textDark)),
+                const SizedBox(height: 8),
+                Text(
+                  '実際に別口座へ移した・支払った金額を入力してください。',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: const Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration:
+                      const InputDecoration(hintText: '例：10', suffixText: '万円'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: memoController,
+                  decoration: const InputDecoration(hintText: 'メモ（任意）'),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    final amount = double.tryParse(amountController.text) ?? 0;
+                    if (amount <= 0) return;
 
-                final entry = ManualEntry(
-                  id: const Uuid().v4(),
-                  goalId: goal.id,
-                  amount: amount,
-                  date: DateTime.now(),
-                  memo: memoController.text.isEmpty
-                      ? null
-                      : memoController.text,
-                );
-                await ref.read(manualEntryProvider.notifier).add(entry);
-                goal.manualAmount += amount;
-                await ref.read(goalProvider.notifier).update(goal);
+                    final entry = ManualEntry(
+                      id: const Uuid().v4(),
+                      goalId: goal.id,
+                      amount: amount,
+                      date: DateTime.now(),
+                      memo: memoController.text.isEmpty
+                          ? null
+                          : memoController.text,
+                    );
+                    await ref.read(manualEntryProvider.notifier).add(entry);
+                    goal.manualAmount += amount;
+                    await ref.read(goalProvider.notifier).update(goal);
 
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('追加'),
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: const Text('追加'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -519,88 +538,104 @@ class _GoalCard extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                goal.type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: AppTheme.textDark),
-              ),
-              if (goal.type == GoalType.project) ...[
-                const SizedBox(height: 4),
-                const Text(
-                  '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-                ),
-              ],
-              const SizedBox(height: 20),
-              TextField(controller: nameController,
-                  decoration: const InputDecoration(hintText: '名前')),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: goal.type == GoalType.saving ? '目標金額（万円）' : '目標総額（万円）',
-                  suffixText: goal.type == GoalType.saving ? '万円' : '万円（総額）',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '開始',
-                      year: startYear,
-                      month: startMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { startYear = y; startMonth = m; }),
+                  Text(
+                    goal.type == GoalType.saving ? '貯蓄を編集' : 'プロジェクトを編集',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: AppTheme.textDark),
+                  ),
+                  if (goal.type == GoalType.project) ...[
+                    const SizedBox(height: 4),
+                    const Text(
+                      '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
+                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(hintText: '名前')),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: goal.type == GoalType.saving
+                          ? '目標金額（万円）'
+                          : '目標総額（万円）',
+                      suffixText:
+                          goal.type == GoalType.saving ? '万円' : '万円（総額）',
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '終了',
-                      year: endYear,
-                      month: endMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { endYear = y; endMonth = m; }),
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '開始',
+                          year: startYear,
+                          month: startMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '終了',
+                          year: endYear,
+                          month: endMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+                      goal.name = name;
+                      goal.targetAmount = amount;
+                      goal.startYear = startYear;
+                      goal.startMonth = startMonth;
+                      goal.endYear = endYear;
+                      goal.endMonth = endMonth;
+                      await ref.read(goalProvider.notifier).update(goal);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: const Text('保存'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  final amount =
-                      double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-                  goal.name = name;
-                  goal.targetAmount = amount;
-                  goal.startYear = startYear;
-                  goal.startMonth = startMonth;
-                  goal.endYear = endYear;
-                  goal.endMonth = endMonth;
-                  await ref.read(goalProvider.notifier).update(goal);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('保存'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -671,10 +706,14 @@ class _StatusDropdown extends ConsumerWidget {
 
   String _statusLabel(GoalStatus status) {
     switch (status) {
-      case GoalStatus.active: return '🚧 進行中';
-      case GoalStatus.completed: return '✅ 達成';
-      case GoalStatus.frozen: return '❄️ 凍結';
-      case GoalStatus.abandoned: return '💀 断念';
+      case GoalStatus.active:
+        return '🚧 進行中';
+      case GoalStatus.completed:
+        return '✅ 達成';
+      case GoalStatus.frozen:
+        return '❄️ 凍結';
+      case GoalStatus.abandoned:
+        return '💀 断念';
     }
   }
 }
@@ -731,8 +770,7 @@ class _BudgetList extends ConsumerWidget {
 
   void _showBudgetDialog(BuildContext context, WidgetRef ref,
       {Budget? existing}) {
-    final nameController =
-        TextEditingController(text: existing?.name ?? '');
+    final nameController = TextEditingController(text: existing?.name ?? '');
     final amountController = TextEditingController(
         text: existing?.monthlyAmount.toStringAsFixed(0) ?? '');
     final now = DateTime.now();
@@ -749,102 +787,113 @@ class _BudgetList extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isEdit ? '予算を編集' : '毎月の特別予算を追加',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: AppTheme.textDark)),
-              const SizedBox(height: 4),
-              const Text(
-                '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                decoration:
-                    const InputDecoration(hintText: '例：推し活、外食'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    hintText: '月額予算（万円/月）', suffixText: '万円/月'),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '開始',
-                      year: startYear,
-                      month: startMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { startYear = y; startMonth = m; }),
-                    ),
+                  Text(isEdit ? '予算を編集' : '毎月の特別予算を追加',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(color: AppTheme.textDark)),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '終了',
-                      year: endYear,
-                      month: endMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { endYear = y; endMonth = m; }),
-                    ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(hintText: '例：推し活、外食'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        hintText: '月額予算（万円/月）', suffixText: '万円/月'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '開始',
+                          year: startYear,
+                          month: startMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '終了',
+                          year: endYear,
+                          month: endMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+
+                      if (isEdit) {
+                        existing!.name = name;
+                        existing.monthlyAmount = amount;
+                        existing.startYear = startYear;
+                        existing.startMonth = startMonth;
+                        existing.endYear = endYear;
+                        existing.endMonth = endMonth;
+                        await ref
+                            .read(budgetProvider.notifier)
+                            .update(existing);
+                      } else {
+                        await ref.read(budgetProvider.notifier).add(Budget(
+                              id: const Uuid().v4(),
+                              name: name,
+                              monthlyAmount: amount,
+                              startYear: startYear,
+                              startMonth: startMonth,
+                              endYear: endYear,
+                              endMonth: endMonth,
+                              emoji: '💰',
+                              createdAt: DateTime.now(),
+                            ));
+                      }
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: Text(isEdit ? '保存' : '追加'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  final amount =
-                      double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-
-                  if (isEdit) {
-                    existing!.name = name;
-                    existing.monthlyAmount = amount;
-                    existing.startYear = startYear;
-                    existing.startMonth = startMonth;
-                    existing.endYear = endYear;
-                    existing.endMonth = endMonth;
-                    await ref
-                        .read(budgetProvider.notifier)
-                        .update(existing);
-                  } else {
-                    await ref.read(budgetProvider.notifier).add(Budget(
-                          id: const Uuid().v4(),
-                          name: name,
-                          monthlyAmount: amount,
-                          startYear: startYear,
-                          startMonth: startMonth,
-                          endYear: endYear,
-                          endMonth: endMonth,
-                          emoji: '💰',
-                          createdAt: DateTime.now(),
-                        ));
-                  }
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: Text(isEdit ? '保存' : '追加'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -861,15 +910,12 @@ class _BudgetCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color = calc != null
-        ? AppTheme.budgetStatusColor(calc!.status)
-        : Colors.grey;
+    final color =
+        calc != null ? AppTheme.budgetStatusColor(calc!.status) : Colors.grey;
     final bgColor = calc != null
         ? AppTheme.budgetStatusBgColor(calc!.status)
         : const Color(0xFFF5F5F5);
-    final label = calc != null
-        ? AppTheme.budgetStatusLabel(calc!.status)
-        : '-';
+    final label = calc != null ? AppTheme.budgetStatusLabel(calc!.status) : '-';
     final progress = (calc?.usageRate ?? 0).clamp(0.0, 1.0);
 
     return Container(
@@ -884,8 +930,7 @@ class _BudgetCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text(budget.emoji ?? '💰',
-                  style: const TextStyle(fontSize: 22)),
+              Text(budget.emoji ?? '💰', style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -893,16 +938,19 @@ class _BudgetCard extends ConsumerWidget {
                   children: [
                     Text(budget.name,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark)),
                     Text(
                       '月額 ${Formatter.man(calc?.currentMonthlyAmount ?? budget.monthlyAmount)} / ${budget.endYear}年${budget.endMonth}月まで',
-                      style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+                      style: const TextStyle(
+                          color: Color(0xFF6B7280), fontSize: 12),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: bgColor,
                   borderRadius: BorderRadius.circular(20),
@@ -930,9 +978,11 @@ class _BudgetCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('利用済 ${Formatter.man(budget.usedAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               Text('予算合計 ${Formatter.man(budget.plannedAmount)}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
             ],
           ),
           const Divider(height: 20),
@@ -943,7 +993,8 @@ class _BudgetCard extends ConsumerWidget {
                 onTap: () => _showEditDialog(context, ref),
                 child: const Padding(
                   padding: EdgeInsets.all(4),
-                  child: Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
+                  child:
+                      Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
                 ),
               ),
               const SizedBox(width: 8),
@@ -976,82 +1027,95 @@ class _BudgetCard extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('予算を編集',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: AppTheme.textDark)),
-              const SizedBox(height: 4),
-              const Text(
-                '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              TextField(controller: nameController,
-                  decoration: const InputDecoration(hintText: '名前')),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    hintText: '月額予算（万円/月）', suffixText: '万円/月'),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '開始',
-                      year: startYear,
-                      month: startMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { startYear = y; startMonth = m; }),
-                    ),
+                  Text('予算を編集',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(color: AppTheme.textDark)),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _MonthPicker(
-                      label: '終了',
-                      year: endYear,
-                      month: endMonth,
-                      onChanged: (y, m) => setModalState(
-                          () { endYear = y; endMonth = m; }),
-                    ),
+                  const SizedBox(height: 20),
+                  TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(hintText: '名前')),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        hintText: '月額予算（万円/月）', suffixText: '万円/月'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '開始',
+                          year: startYear,
+                          month: startMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MonthPicker(
+                          label: '終了',
+                          year: endYear,
+                          month: endMonth,
+                          onChanged: (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+                      budget.name = name;
+                      budget.monthlyAmount = amount;
+                      budget.startYear = startYear;
+                      budget.startMonth = startMonth;
+                      budget.endYear = endYear;
+                      budget.endMonth = endMonth;
+                      await ref.read(budgetProvider.notifier).update(budget);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    child: const Text('保存'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  final amount =
-                      double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-                  budget.name = name;
-                  budget.monthlyAmount = amount;
-                  budget.startYear = startYear;
-                  budget.startMonth = startMonth;
-                  budget.endYear = endYear;
-                  budget.endMonth = endMonth;
-                  await ref.read(budgetProvider.notifier).update(budget);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                child: const Text('保存'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1074,8 +1138,7 @@ class _BudgetCard extends ConsumerWidget {
               await ref.read(budgetProvider.notifier).delete(budget.id);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('削除',
-                style: TextStyle(color: Colors.redAccent)),
+            child: const Text('削除', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -1097,8 +1160,8 @@ class _AddButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          border: Border.all(
-              color: AppTheme.primary.withOpacity(0.4), width: 1.5),
+          border:
+              Border.all(color: AppTheme.primary.withOpacity(0.4), width: 1.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -1155,7 +1218,10 @@ class _MonthPicker extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month - 1;
-                  if (m < 1) { m = 12; y--; }
+                  if (m < 1) {
+                    m = 12;
+                    y--;
+                  }
                   onChanged(y, m);
                 },
                 child: const Padding(
@@ -1168,7 +1234,10 @@ class _MonthPicker extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month + 1;
-                  if (m > 12) { m = 1; y++; }
+                  if (m > 12) {
+                    m = 1;
+                    y++;
+                  }
                   onChanged(y, m);
                 },
                 child: const Padding(

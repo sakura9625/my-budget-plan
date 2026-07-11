@@ -58,178 +58,183 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     });
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('設定')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildSection(
-            context,
-            title: '収入・固定費',
-            children: [
-              _buildInputField('年間手取り（万円）', _incomeController),
-              const SizedBox(height: 16),
-              _buildInputField('年間固定費（万円）', _fixedCostController),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('年間自由資金',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark)),
-                    AnimatedBuilder(
-                      animation: Listenable.merge(
-                          [_incomeController, _fixedCostController]),
-                      builder: (context, _) => Text(
-                        Formatter.man(_annualFreeMoney),
-                        style: const TextStyle(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _saveIncome,
-                child: const Text('保存'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSection(
-            context,
-            title: '現在の残高',
-            children: [
-              const Text(
-                'アプリ全体で1つの総残高として扱われます。レビューで残高を入力すると、ここも同じ値に更新されます。',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 12, height: 1.6),
-              ),
-              const SizedBox(height: 16),
-              _buildInputField('現在の残高（万円）', _totalBalanceController),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _saveTotalBalance,
-                child: const Text('保存'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSection(
-            context,
-            title: 'レビュー日設定',
-            children: [
-              Text(
-                '給与振込・固定費・カード引き落としが概ね終わった日がおすすめです。',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: const Color(0xFF6B7280), height: 1.6),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      setState(() =>
-                          _reviewDay = _reviewDay > 1 ? _reviewDay - 1 : 28);
-                    },
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: AppTheme.primary),
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildSection(
+              context,
+              title: '収入・固定費',
+              children: [
+                _buildInputField('年間手取り（万円）', _incomeController),
+                const SizedBox(height: 16),
+                _buildInputField('年間固定費（万円）', _fixedCostController),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  Text(
-                    '毎月$_reviewDay日',
-                    style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primary),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      setState(() =>
-                          _reviewDay = _reviewDay < 28 ? _reviewDay + 1 : 1);
-                    },
-                    icon: const Icon(Icons.add_circle_outline,
-                        color: AppTheme.primary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _saveReviewDay,
-                child: const Text('保存'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSection(
-            context,
-            title: '通知',
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('レビューリマインダー',
+                      const Text('年間自由資金',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: AppTheme.textDark)),
-                      Text(
-                        '毎月$_reviewDay日に通知します',
-                        style: const TextStyle(
-                            color: Color(0xFF6B7280), fontSize: 12),
+                      AnimatedBuilder(
+                        animation: Listenable.merge(
+                            [_incomeController, _fixedCostController]),
+                        builder: (context, _) => Text(
+                          Formatter.man(_annualFreeMoney),
+                          style: const TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  Switch(
-                    value: _notificationEnabled,
-                    onChanged: (val) async {
-                      setState(() => _notificationEnabled = val);
-                      await _saveNotification(val);
-                    },
-                    activeColor: AppTheme.primary,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSection(
-            context,
-            title: 'アプリ情報',
-            children: [
-              _buildInfoRow('バージョン', '1.0.0'),
-              const SizedBox(height: 8),
-              _buildInfoRow('データ保存', 'ローカル（端末内）'),
-            ],
-          ),
-          // TODO: リリース前に扱いを検討（テスト・初期化用のデータリセット機能。
-          // 正式リリース時は非表示にするか、開発者メニュー等に隔離するか判断すること）
-          const SizedBox(height: 40),
-          OutlinedButton.icon(
-            onPressed: () => _confirmResetAll(context),
-            icon: const Icon(Icons.delete_forever_outlined, color: AppTheme.danger),
-            label: const Text('データをすべてリセット'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.danger,
-              side: const BorderSide(color: AppTheme.danger),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _saveIncome,
+                  child: const Text('保存'),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 80),
-        ],
+            const SizedBox(height: 20),
+            _buildSection(
+              context,
+              title: '現在の残高',
+              children: [
+                const Text(
+                  'アプリ全体で1つの総残高として扱われます。レビューで残高を入力すると、ここも同じ値に更新されます。',
+                  style: TextStyle(
+                      color: Color(0xFF6B7280), fontSize: 12, height: 1.6),
+                ),
+                const SizedBox(height: 16),
+                _buildInputField('現在の残高（万円）', _totalBalanceController),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _saveTotalBalance,
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSection(
+              context,
+              title: 'レビュー日設定',
+              children: [
+                Text(
+                  '給与振込・固定費・カード引き落としが概ね終わった日がおすすめです。',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: const Color(0xFF6B7280), height: 1.6),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        setState(() =>
+                            _reviewDay = _reviewDay > 1 ? _reviewDay - 1 : 28);
+                      },
+                      icon: const Icon(Icons.remove_circle_outline,
+                          color: AppTheme.primary),
+                    ),
+                    Text(
+                      '毎月$_reviewDay日',
+                      style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() =>
+                            _reviewDay = _reviewDay < 28 ? _reviewDay + 1 : 1);
+                      },
+                      icon: const Icon(Icons.add_circle_outline,
+                          color: AppTheme.primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _saveReviewDay,
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSection(
+              context,
+              title: '通知',
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('レビューリマインダー',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textDark)),
+                        Text(
+                          '毎月$_reviewDay日に通知します',
+                          style: const TextStyle(
+                              color: Color(0xFF6B7280), fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    Switch(
+                      value: _notificationEnabled,
+                      onChanged: (val) async {
+                        setState(() => _notificationEnabled = val);
+                        await _saveNotification(val);
+                      },
+                      activeColor: AppTheme.primary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSection(
+              context,
+              title: 'アプリ情報',
+              children: [
+                _buildInfoRow('バージョン', '1.0.0'),
+                const SizedBox(height: 8),
+                _buildInfoRow('データ保存', 'ローカル（端末内）'),
+              ],
+            ),
+            // TODO: リリース前に扱いを検討（テスト・初期化用のデータリセット機能。
+            // 正式リリース時は非表示にするか、開発者メニュー等に隔離するか判断すること）
+            const SizedBox(height: 40),
+            OutlinedButton.icon(
+              onPressed: () => _confirmResetAll(context),
+              icon: const Icon(Icons.delete_forever_outlined,
+                  color: AppTheme.danger),
+              label: const Text('データをすべてリセット'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.danger,
+                side: const BorderSide(color: AppTheme.danger),
+              ),
+            ),
+            const SizedBox(height: 80),
+          ],
+        ),
       ),
     );
   }
@@ -253,8 +258,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               Navigator.pop(dialogContext);
               await _resetAllData();
             },
-            child: const Text('リセットする',
-                style: TextStyle(color: AppTheme.danger)),
+            child:
+                const Text('リセットする', style: TextStyle(color: AppTheme.danger)),
           ),
         ],
       ),
@@ -342,8 +347,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     final income = double.tryParse(_incomeController.text) ?? 0;
     final fixed = double.tryParse(_fixedCostController.text) ?? 0;
     if (income <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('年間手取りを入力してください')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('年間手取りを入力してください')));
       return;
     }
     settings.annualIncome = income;

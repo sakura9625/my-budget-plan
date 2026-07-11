@@ -64,6 +64,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   ];
 
   void _nextStep() {
+    // ページ遷移前に必ずキーボードを閉じる（次のステップにキーボードが残らないように）
+    FocusScope.of(context).unfocus();
     if (_currentStep < 7) {
       setState(() => _currentStep++);
       _pageController.nextPage(
@@ -74,6 +76,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   }
 
   void _prevStep() {
+    FocusScope.of(context).unfocus();
     if (_currentStep > 0) {
       setState(() => _currentStep--);
       _pageController.previousPage(
@@ -103,19 +106,23 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           ),
         ),
       ),
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _buildStep1(),
-          _buildStep2(),
-          _buildStepBalance(),
-          _buildStep3(),
-          _buildStep4(),
-          _buildStep5(),
-          _buildStep6(),
-          _buildStep7(),
-        ],
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildStep1(),
+            _buildStep2(),
+            _buildStepBalance(),
+            _buildStep3(),
+            _buildStep4(),
+            _buildStep5(),
+            _buildStep6(),
+            _buildStep7(),
+          ],
+        ),
       ),
     );
   }
@@ -138,7 +145,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           TextField(
             controller: _incomeController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: '例：500', suffixText: '万円'),
+            decoration:
+                const InputDecoration(hintText: '例：500', suffixText: '万円'),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 20),
@@ -147,7 +155,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           TextField(
             controller: _fixedCostController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: '例：240', suffixText: '万円'),
+            decoration:
+                const InputDecoration(hintText: '例：240', suffixText: '万円'),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 24),
@@ -170,7 +179,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           const Center(
             child: PigWithSpeech(
               asset: 'pig_bank_cute.png',
-              text: '固定費は家賃・光熱費・通信費・保険みたいに、毎月決まって出ていくお金だよ。だいたいでいいから、1年分の合計を入れてね！',
+              text:
+                  '固定費は家賃・光熱費・通信費・保険みたいに、毎月決まって出ていくお金だよ。だいたいでいいから、1年分の合計を入れてね！',
             ),
           ),
         ],
@@ -185,8 +195,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       horizontalPadding: 24,
       children: [
         const SizedBox(height: 8),
-        Text('純粋な貯蓄目標はありますか？',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text('純粋な貯蓄目標はありますか？', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
         Text('老後資金・緊急資金など。なければスキップできます。',
             style: Theme.of(context).textTheme.bodySmall),
@@ -211,8 +220,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       horizontalPadding: 24,
       children: [
         const SizedBox(height: 8),
-        Text('現在の残高',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text('現在の残高', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
         Text('今の貯蓄・口座残高の合計を入力しましょう',
             style: Theme.of(context).textTheme.bodySmall),
@@ -222,7 +230,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         TextField(
           controller: _totalBalanceController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: '例：100', suffixText: '万円'),
+          decoration:
+              const InputDecoration(hintText: '例：100', suffixText: '万円'),
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 32),
@@ -250,7 +259,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         ..._projects.asMap().entries.map((e) => _buildGoalChip(e.value, () {
               setState(() => _projects.removeAt(e.key));
             })),
-        _buildAddGoalButton('プロジェクトを追加', () => _showGoalDialog(isSaving: false)),
+        _buildAddGoalButton(
+            'プロジェクトを追加', () => _showGoalDialog(isSaving: false)),
         const SizedBox(height: 32),
         ElevatedButton(
           onPressed: _nextStep,
@@ -295,8 +305,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     double totalGoal = 0;
     for (final g in [..._savings, ..._projects]) {
       final months = (g['endYear'] * 12 + g['endMonth']) -
-          (g['startYear'] * 12 + g['startMonth']) + 1;
-      totalGoal += (g['amount'] as double) / months *
+          (g['startYear'] * 12 + g['startMonth']) +
+          1;
+      totalGoal += (g['amount'] as double) /
+          months *
           _targetMonthsInCurrentYear(
               g['startYear'], g['startMonth'], g['endYear'], g['endMonth']);
     }
@@ -324,8 +336,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           _buildSummaryRow('年間手取り', Formatter.man(income)),
           _buildSummaryRow('年間固定費', Formatter.man(fixed)),
           _buildSummaryRow('年間自由資金', Formatter.man(annualFree)),
-          _buildSummaryRow('現在の残高',
-              Formatter.man(double.tryParse(_totalBalanceController.text) ?? 0)),
+          _buildSummaryRow(
+              '現在の残高',
+              Formatter.man(
+                  double.tryParse(_totalBalanceController.text) ?? 0)),
           Divider(height: 24, color: Colors.white.withOpacity(0.2)),
           _buildSummaryRow('今年の貯蓄目標', Formatter.man(totalGoal)),
           _buildSummaryRow('今年のプロジェクト', ''),
@@ -345,7 +359,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           ),
           if (isNegative) ...[
             const SizedBox(height: 16),
-            _buildWarningCard('この計画では自由に使えるお金がマイナスになります。貯蓄・プロジェクト・予算のいずれかを見直してください。'),
+            _buildWarningCard(
+                'この計画では自由に使えるお金がマイナスになります。貯蓄・プロジェクト・予算のいずれかを見直してください。'),
           ],
           const SizedBox(height: 32),
           ElevatedButton(
@@ -415,16 +430,16 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _saveAndComplete,
-            child: const Text('年間予算を作成する'),
-          ),
-          const SizedBox(height: 32),
           const Center(
             child: PigWithSpeech(
               asset: 'pig_bank_rich.png',
               text: '毎月の給与の振込、固定費やカードの引き落としが終わった日がオススメだぞ',
             ),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _saveAndComplete,
+            child: const Text('年間予算を作成する'),
           ),
         ],
       ),
@@ -439,8 +454,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('準備完了！',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text('準備完了！', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 20),
             const PigSpeechBubble(
               'あとはこのオレさまに任せときな。一緒に攻めていくぞ！\n貯めないブタはただのブタだぜ',
@@ -496,8 +510,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       fontSize: 20)),
               if (sub != null)
                 Text(sub,
-                    style: const TextStyle(
-                        color: AppTheme.primary, fontSize: 12)),
+                    style:
+                        const TextStyle(color: AppTheme.primary, fontSize: 12)),
             ],
           ),
         ],
@@ -546,7 +560,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 Text(
                     '目標 ${Formatter.man((data['amount'] as double))} / ${data['startYear']}/${data['startMonth']}〜${data['endYear']}/${data['endMonth']}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF6B7280))),
               ],
             ),
           ),
@@ -579,7 +594,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, color: AppTheme.textDark)),
                 Text('月額 ${Formatter.man((data['amount'] as double))}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF6B7280))),
               ],
             ),
           ),
@@ -598,8 +614,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          border: Border.all(
-              color: AppTheme.primary.withOpacity(0.4), width: 1.5),
+          border:
+              Border.all(color: AppTheme.primary.withOpacity(0.4), width: 1.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -625,8 +641,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         children: [
           Text(label,
               style: TextStyle(
-                  fontWeight:
-                      highlight ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: highlight ? FontWeight.bold : FontWeight.normal,
                   fontSize: 14,
                   color: Colors.white)),
           Text(value,
@@ -660,98 +675,108 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isSaving ? '貯蓄を追加' : 'プロジェクトを追加',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: AppTheme.textDark)),
-              if (!isSaving) ...[
-                const SizedBox(height: 4),
-                const Text('どんな目的でいくら貯めたいか記入しましょう',
-                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-              ],
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                    hintText: isSaving ? '例：老後資金' : '例：モルディブ旅行'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration:
-                    const InputDecoration(hintText: '目標金額（万円）', suffixText: '万円'),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _buildMonthPicker(
-                      '開始',
-                      startYear,
-                      startMonth,
-                      (y, m) => setModalState(() {
-                        startYear = y;
-                        startMonth = m;
-                      }),
-                    ),
+                  Text(isSaving ? '貯蓄を追加' : 'プロジェクトを追加',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(color: AppTheme.textDark)),
+                  if (!isSaving) ...[
+                    const SizedBox(height: 4),
+                    const Text('どんな目的でいくら貯めたいか記入しましょう',
+                        style:
+                            TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                  ],
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                        hintText: isSaving ? '例：老後資金' : '例：モルディブ旅行'),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMonthPicker(
-                      '終了',
-                      endYear,
-                      endMonth,
-                      (y, m) => setModalState(() {
-                        endYear = y;
-                        endMonth = m;
-                      }),
-                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        hintText: '目標金額（万円）', suffixText: '万円'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMonthPicker(
+                          '開始',
+                          startYear,
+                          startMonth,
+                          (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMonthPicker(
+                          '終了',
+                          endYear,
+                          endMonth,
+                          (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+                      final data = {
+                        'name': name,
+                        'amount': amount,
+                        'emoji': emoji,
+                        'startYear': startYear,
+                        'startMonth': startMonth,
+                        'endYear': endYear,
+                        'endMonth': endMonth,
+                        'isSaving': isSaving,
+                      };
+                      setState(() {
+                        if (isSaving) {
+                          _savings.add(data);
+                        } else {
+                          _projects.add(data);
+                        }
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text('追加'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  final amount = double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-                  final data = {
-                    'name': name,
-                    'amount': amount,
-                    'emoji': emoji,
-                    'startYear': startYear,
-                    'startMonth': startMonth,
-                    'endYear': endYear,
-                    'endMonth': endMonth,
-                    'isSaving': isSaving,
-                  };
-                  setState(() {
-                    if (isSaving) {
-                      _savings.add(data);
-                    } else {
-                      _projects.add(data);
-                    }
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('追加'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -774,90 +799,98 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('毎月の特別予算を追加',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: AppTheme.textDark)),
-              const SizedBox(height: 4),
-              const Text('月々の特別に確保したい予算を記入しましょう',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: nameController,
-                decoration:
-                    const InputDecoration(hintText: '例：推し活、外食'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    hintText: '月額予算（万円）', suffixText: '万円'),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        builder: (context, setModalState) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _buildMonthPicker(
-                      '開始',
-                      startYear,
-                      startMonth,
-                      (y, m) => setModalState(() {
-                        startYear = y;
-                        startMonth = m;
-                      }),
-                    ),
+                  Text('毎月の特別予算を追加',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(color: AppTheme.textDark)),
+                  const SizedBox(height: 4),
+                  const Text('月々の特別に確保したい予算を記入しましょう',
+                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(hintText: '例：推し活、外食'),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMonthPicker(
-                      '終了',
-                      endYear,
-                      endMonth,
-                      (y, m) => setModalState(() {
-                        endYear = y;
-                        endMonth = m;
-                      }),
-                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        hintText: '月額予算（万円）', suffixText: '万円'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMonthPicker(
+                          '開始',
+                          startYear,
+                          startMonth,
+                          (y, m) => setModalState(() {
+                            startYear = y;
+                            startMonth = m;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMonthPicker(
+                          '終了',
+                          endYear,
+                          endMonth,
+                          (y, m) => setModalState(() {
+                            endYear = y;
+                            endMonth = m;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      final amount =
+                          double.tryParse(amountController.text) ?? 0;
+                      if (name.isEmpty || amount <= 0) return;
+                      setState(() {
+                        _budgets.add({
+                          'name': name,
+                          'amount': amount,
+                          'emoji': '💰',
+                          'startYear': startYear,
+                          'startMonth': startMonth,
+                          'endYear': endYear,
+                          'endMonth': endMonth,
+                        });
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text('追加'),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  final amount = double.tryParse(amountController.text) ?? 0;
-                  if (name.isEmpty || amount <= 0) return;
-                  setState(() {
-                    _budgets.add({
-                      'name': name,
-                      'amount': amount,
-                      'emoji': '💰',
-                      'startYear': startYear,
-                      'startMonth': startMonth,
-                      'endYear': endYear,
-                      'endMonth': endMonth,
-                    });
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('追加'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -876,8 +909,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style:
-                  const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
           const SizedBox(height: 4),
           Text('$year年$month月',
               style: const TextStyle(
@@ -891,7 +923,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month - 1;
-                  if (m < 1) { m = 12; y--; }
+                  if (m < 1) {
+                    m = 12;
+                    y--;
+                  }
                   onChanged(y, m);
                 },
                 child: const Padding(
@@ -904,7 +939,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   int y = year, m = month + 1;
-                  if (m > 12) { m = 1; y++; }
+                  if (m > 12) {
+                    m = 1;
+                    y++;
+                  }
                   onChanged(y, m);
                 },
                 child: const Padding(
