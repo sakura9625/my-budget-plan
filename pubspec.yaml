@@ -1,7 +1,7 @@
 name: my_budget_plan
 description: 人生プロジェクト管理アプリ
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -42,6 +42,22 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.9
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/characters/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  remove_alpha_ios: true
+  background_color_ios: "#1A2B5E"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/icon/app_icon.png"

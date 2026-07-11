@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme.dart';
+import '../widgets/pig_speech_bubble.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -92,6 +93,9 @@ class _Page1 extends StatelessWidget {
       title: 'お金のこと、こんなふうに\n思ったことはありませんか？',
       body: 'もっと貯金したい。\n趣味にもお金を使いたい。\n今月あといくら使っていいか分からない。\n\nでも、家計簿は続かない。',
       supplement: 'このアプリは、毎月1回・3つの入力だけで、\nあなたのお金の計画をサポートします。',
+      prominentSupplement: true,
+      pigAsset: 'pig_bank_cute.png',
+      pigComment: 'それは助かる！めんどくさがりのボクにぴったりだ！',
     );
   }
 }
@@ -101,7 +105,7 @@ class _Page2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,6 +139,13 @@ class _Page2 extends StatelessWidget {
                 const SizedBox(height: 8),
                 _descItem('📋 予算', '「趣味にいくら使いたい！」というお金。生活費とは別にして管理'),
               ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Center(
+            child: PigWithSpeech(
+              asset: 'pig_bank_rich.png',
+              text: 'なんでもかんでも登録すると失敗するから特別なやつだけ登録するんだぜ',
             ),
           ),
         ],
@@ -218,7 +229,7 @@ class _Page3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,6 +269,13 @@ class _Page3 extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 32),
+          const Center(
+            child: PigWithSpeech(
+              asset: 'pig_bank_cute.png',
+              text: 'おお！これは分かりやすい！',
+            ),
+          ),
         ],
       ),
     );
@@ -292,7 +310,7 @@ class _Page4 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,11 +344,35 @@ class _Page4 extends StatelessWidget {
                 const SizedBox(height: 16),
                 _inputItem(context, '1', '現在の残高'),
                 const SizedBox(height: 12),
-                _inputItem(context, '2', 'プロジェクトで確保した金額'),
+                _inputItem(context, '2', 'プロジェクト用に確保した金額'),
                 const SizedBox(height: 12),
                 _inputItem(context, '3', '予算で使った金額'),
               ],
             ),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: const [
+              Expanded(
+                child: PigWithSpeech(
+                  asset: 'pig_bank_cute.png',
+                  text: 'うんうん♪',
+                  imageSize: 76,
+                  fontSize: 12,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: PigWithSpeech(
+                  asset: 'pig_bank_rich.png',
+                  text: 'これならお前でも続くだろ？',
+                  imageSize: 76,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -371,6 +413,8 @@ class _Page5 extends StatelessWidget {
       emoji: '🎯',
       title: 'あなた専用の\n年間予算を作りましょう',
       body: '年間手取り、固定費、貯蓄目標、\nプロジェクト、予算を登録すると、\n\n毎月あといくら使えるか、\n目標を達成できそうかを\n確認できるようになります。',
+      pigAsset: 'pig_bank_rich.png',
+      pigComment: 'オレさまは家計簿を振り返るためにつけるんじゃねぇ。攻めるために使うんだぜ',
     );
   }
 }
@@ -380,17 +424,23 @@ class _OnboardingPage extends StatelessWidget {
   final String title;
   final String body;
   final String? supplement;
+  final bool prominentSupplement;
+  final String? pigAsset;
+  final String? pigComment;
 
   const _OnboardingPage({
     required this.emoji,
     required this.title,
     required this.body,
     this.supplement,
+    this.prominentSupplement = false,
+    this.pigAsset,
+    this.pigComment,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,21 +458,32 @@ class _OnboardingPage extends StatelessWidget {
                 ),
           ),
           if (supplement != null) ...[
-            const SizedBox(height: 20),
+            SizedBox(height: prominentSupplement ? 28 : 20),
             Container(
-              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              padding: EdgeInsets.all(prominentSupplement ? 24 : 16),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 supplement!,
+                textAlign:
+                    prominentSupplement ? TextAlign.center : TextAlign.start,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.primary,
                       height: 1.6,
+                      fontSize: prominentSupplement ? 16 : null,
+                      fontWeight: prominentSupplement
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
               ),
             ),
+          ],
+          if (pigAsset != null && pigComment != null) ...[
+            const SizedBox(height: 32),
+            Center(child: PigWithSpeech(asset: pigAsset!, text: pigComment!)),
           ],
         ],
       ),

@@ -11,6 +11,8 @@ import '../providers/budget_provider.dart';
 import '../providers/calculation_provider.dart' show monthlyFromAnnual;
 import '../theme.dart';
 import '../utils/formatter.dart';
+import '../widgets/pig_speech_bubble.dart';
+import '../widgets/pig_background_body.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -164,6 +166,13 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             onPressed: _annualFreeMoney > 0 ? _nextStep : null,
             child: const Text('次へ'),
           ),
+          const SizedBox(height: 32),
+          const Center(
+            child: PigWithSpeech(
+              asset: 'pig_bank_cute.png',
+              text: '固定費は家賃・光熱費・通信費・保険みたいに、毎月決まって出ていくお金だよ。だいたいでいいから、1年分の合計を入れてね！',
+            ),
+          ),
         ],
       ),
     );
@@ -171,117 +180,109 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
   // Step2: 貯蓄
   Widget _buildStep2() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text('純粋な貯蓄目標はありますか？',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('老後資金・緊急資金など。なければスキップできます。',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 24),
-          ..._savings.asMap().entries.map((e) => _buildGoalChip(e.value, () {
-                setState(() => _savings.removeAt(e.key));
-              })),
-          _buildAddGoalButton('貯蓄を追加', () => _showGoalDialog(isSaving: true)),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _nextStep,
-            child: Text(_savings.isEmpty ? 'スキップ' : '次へ'),
-          ),
-        ],
-      ),
+    return PigBackgroundBody(
+      pigAsset: 'pig_piggybank.png',
+      horizontalPadding: 24,
+      children: [
+        const SizedBox(height: 8),
+        Text('純粋な貯蓄目標はありますか？',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('老後資金・緊急資金など。なければスキップできます。',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 24),
+        ..._savings.asMap().entries.map((e) => _buildGoalChip(e.value, () {
+              setState(() => _savings.removeAt(e.key));
+            })),
+        _buildAddGoalButton('貯蓄を追加', () => _showGoalDialog(isSaving: true)),
+        const SizedBox(height: 32),
+        ElevatedButton(
+          onPressed: _nextStep,
+          child: Text(_savings.isEmpty ? 'スキップ' : '次へ'),
+        ),
+      ],
     );
   }
 
   // Step3: 現在の残高
   Widget _buildStepBalance() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text('現在の残高',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('今の貯蓄・口座残高の合計を入力しましょう',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 24),
-          _buildLabel('現在の残高（万円）'),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _totalBalanceController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: '例：100', suffixText: '万円'),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _nextStep,
-            child: const Text('次へ'),
-          ),
-        ],
-      ),
+    return PigBackgroundBody(
+      pigAsset: 'pig_navy_chair.png',
+      horizontalPadding: 24,
+      children: [
+        const SizedBox(height: 8),
+        Text('現在の残高',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('今の貯蓄・口座残高の合計を入力しましょう',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 24),
+        _buildLabel('現在の残高（万円）'),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _totalBalanceController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: '例：100', suffixText: '万円'),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 32),
+        ElevatedButton(
+          onPressed: _nextStep,
+          child: const Text('次へ'),
+        ),
+      ],
     );
   }
 
   // Step4: プロジェクト
   Widget _buildStep3() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text('特定の目的のために貯めたいお金はありますか？',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('旅行・カメラ・車など。なければスキップできます。',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 24),
-          ..._projects.asMap().entries.map((e) => _buildGoalChip(e.value, () {
-                setState(() => _projects.removeAt(e.key));
-              })),
-          _buildAddGoalButton('プロジェクトを追加', () => _showGoalDialog(isSaving: false)),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _nextStep,
-            child: Text(_projects.isEmpty ? 'スキップ' : '次へ'),
-          ),
-        ],
-      ),
+    return PigBackgroundBody(
+      pigAsset: 'pig_beach.png',
+      horizontalPadding: 24,
+      children: [
+        const SizedBox(height: 8),
+        Text('特定の目的のために貯めたいお金はありますか？',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('旅行・カメラ・車など。なければスキップできます。',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 24),
+        ..._projects.asMap().entries.map((e) => _buildGoalChip(e.value, () {
+              setState(() => _projects.removeAt(e.key));
+            })),
+        _buildAddGoalButton('プロジェクトを追加', () => _showGoalDialog(isSaving: false)),
+        const SizedBox(height: 32),
+        ElevatedButton(
+          onPressed: _nextStep,
+          child: Text(_projects.isEmpty ? 'スキップ' : '次へ'),
+        ),
+      ],
     );
   }
 
   // Step4: 予算
   Widget _buildStep4() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Text('月々の予算を決めておきたいテーマはありますか？',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('推し活・外食・趣味など。使い過ぎを防ぎたいものだけでOKです。',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 24),
-          ..._budgets.asMap().entries.map((e) => _buildBudgetChip(e.value, () {
-                setState(() => _budgets.removeAt(e.key));
-              })),
-          _buildAddGoalButton('予算を追加', _showBudgetDialog),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _nextStep,
-            child: Text(_budgets.isEmpty ? 'スキップ' : '次へ'),
-          ),
-        ],
-      ),
+    return PigBackgroundBody(
+      pigAsset: 'pig_dining.png',
+      horizontalPadding: 24,
+      children: [
+        const SizedBox(height: 8),
+        Text('月々の予算を決めておきたいテーマはありますか？',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('推し活・外食・趣味など。使い過ぎを防ぎたいものだけでOKです。',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 24),
+        ..._budgets.asMap().entries.map((e) => _buildBudgetChip(e.value, () {
+              setState(() => _budgets.removeAt(e.key));
+            })),
+        _buildAddGoalButton('予算を追加', _showBudgetDialog),
+        const SizedBox(height: 32),
+        ElevatedButton(
+          onPressed: _nextStep,
+          child: Text(_budgets.isEmpty ? 'スキップ' : '次へ'),
+        ),
+      ],
     );
   }
 
@@ -389,7 +390,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   children: [
                     IconButton(
                       onPressed: () {
-                        if (_reviewDay > 1) setState(() => _reviewDay--);
+                        setState(() =>
+                            _reviewDay = _reviewDay > 1 ? _reviewDay - 1 : 28);
                       },
                       icon: const Icon(Icons.remove_circle_outline),
                       color: AppTheme.primary,
@@ -401,7 +403,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                             color: AppTheme.primary)),
                     IconButton(
                       onPressed: () {
-                        if (_reviewDay < 28) setState(() => _reviewDay++);
+                        setState(() =>
+                            _reviewDay = _reviewDay < 28 ? _reviewDay + 1 : 1);
                       },
                       icon: const Icon(Icons.add_circle_outline),
                       color: AppTheme.primary,
@@ -416,36 +419,43 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
             onPressed: _saveAndComplete,
             child: const Text('年間予算を作成する'),
           ),
+          const SizedBox(height: 32),
+          const Center(
+            child: PigWithSpeech(
+              asset: 'pig_bank_rich.png',
+              text: '毎月の給与の振込、固定費やカードの引き落としが終わった日がオススメだぞ',
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // Step7: 完了
+  // Step7: 完了（成金ブタ）
   Widget _buildStep7() {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 72)),
-            const SizedBox(height: 24),
-            Text('年間予算ができました！',
+            Text('準備完了！',
                 style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            Text(
-              'ホーム画面で今月の状況を確認してみましょう。',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFFC7CDDB),
-                    height: 1.6,
-                  ),
-              textAlign: TextAlign.center,
+            const SizedBox(height: 20),
+            const PigSpeechBubble(
+              'あとはこのオレさまに任せときな。一緒に攻めていくぞ！\n貯めないブタはただのブタだぜ',
+              fontSize: 14,
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 12),
+            Image.asset(
+              'assets/characters/pig_gold_chair.png',
+              height: 220,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () => context.go('/main'),
-              child: const Text('ホームへ'),
+              child: const Text('はじめる'),
             ),
           ],
         ),

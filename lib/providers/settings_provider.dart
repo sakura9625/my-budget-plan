@@ -26,4 +26,10 @@ class SettingsNotifier extends StateNotifier<AppSettings?> {
     }
     state = settings;
   }
+
+  // 呼び出し側は既存のstateインスタンスを直接書き換えてからsave()に渡すため、
+  // デフォルトのidentical()チェックでは変更なしと誤判定され、通知がスキップされてしまう。
+  // ここでは常に変更ありとして通知し、依存するcalculationProvider等に確実に伝播させる。
+  @override
+  bool updateShouldNotify(AppSettings? old, AppSettings? current) => true;
 }

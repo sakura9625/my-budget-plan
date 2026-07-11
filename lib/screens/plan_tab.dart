@@ -10,6 +10,7 @@ import '../providers/manual_entry_provider.dart';
 import '../providers/calculation_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
+import '../widgets/pig_background_body.dart';
 
 class PlanTab extends ConsumerStatefulWidget {
   const PlanTab({super.key});
@@ -77,27 +78,26 @@ class _GoalList extends ConsumerWidget {
         .toList();
     final calc = ref.watch(calculationProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return PigBackgroundBody(
+      pigAsset: type == GoalType.saving ? 'pig_piggybank.png' : 'pig_beach.png',
       children: [
         _buildDescription(
           type == GoalType.saving
               ? '貯蓄は、純粋に貯めておきたいお金。\n使い途は決まってないけど、100万貯めたい！という目標があれば設定してください。'
               : 'プロジェクトは、特定の目的・計画のためにつくりたいお金です。\nたとえば年末に海外旅行にいきたい、ちょっといいパソコンを買いたい！\nそんなときにご利用ください。',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        _AddButton(
+          label: type == GoalType.saving ? '貯蓄を追加' : 'プロジェクトを追加',
+          onTap: () => _showGoalDialog(context, ref, type),
+        ),
+        const SizedBox(height: 16),
         ...goals.map((g) {
           final gc = calc?.goalCalculations
               .where((c) => c.goal.id == g.id)
               .firstOrNull;
           return _GoalCard(goal: g, calc: gc);
         }),
-        const SizedBox(height: 8),
-        _AddButton(
-          label: type == GoalType.saving ? '貯蓄を追加' : 'プロジェクトを追加',
-          onTap: () => _showGoalDialog(context, ref, type),
-        ),
-        const SizedBox(height: 80),
       ],
     );
   }
@@ -164,8 +164,10 @@ class _GoalList extends ConsumerWidget {
               ),
               if (type == GoalType.project) ...[
                 const SizedBox(height: 4),
-                const Text('どんな目的でいくら貯めたいか記入しましょう',
-                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                const Text(
+                  '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                ),
               ],
               const SizedBox(height: 20),
               TextField(
@@ -178,9 +180,9 @@ class _GoalList extends ConsumerWidget {
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  hintText: '目標金額（万円）',
-                  suffixText: '万円',
+                decoration: InputDecoration(
+                  hintText: type == GoalType.saving ? '目標金額（万円）' : '目標総額（万円）',
+                  suffixText: type == GoalType.saving ? '万円' : '万円（総額）',
                 ),
               ),
               const SizedBox(height: 12),
@@ -537,6 +539,13 @@ class _GoalCard extends ConsumerWidget {
                     .titleLarge
                     ?.copyWith(color: AppTheme.textDark),
               ),
+              if (goal.type == GoalType.project) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  '目標の総額（一式）を入力してください。どんな目的でいくら貯めたいか決めましょう。',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                ),
+              ],
               const SizedBox(height: 20),
               TextField(controller: nameController,
                   decoration: const InputDecoration(hintText: '名前')),
@@ -544,8 +553,10 @@ class _GoalCard extends ConsumerWidget {
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                    hintText: '目標金額（万円）', suffixText: '万円'),
+                decoration: InputDecoration(
+                  hintText: goal.type == GoalType.saving ? '目標金額（万円）' : '目標総額（万円）',
+                  suffixText: goal.type == GoalType.saving ? '万円' : '万円（総額）',
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -678,25 +689,24 @@ class _BudgetList extends ConsumerWidget {
     final budgets = ref.watch(budgetProvider);
     final calc = ref.watch(calculationProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return PigBackgroundBody(
+      pigAsset: 'pig_penlight.png',
       children: [
         _buildDescription(
           '予算は、「趣味にいくら使いたい！」など特定のテーマで予算を決めておきたいお金。\nたとえば毎月の推し活に2万円ずつは使いたいな！子どものために3万使おう！\nそんなとき生活費とは別にして管理していけます。',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        _AddButton(
+          label: '予算を追加',
+          onTap: () => _showBudgetDialog(context, ref),
+        ),
+        const SizedBox(height: 16),
         ...budgets.map((b) {
           final bc = calc?.budgetCalculations
               .where((c) => c.budget.id == b.id)
               .firstOrNull;
           return _BudgetCard(budget: b, calc: bc);
         }),
-        const SizedBox(height: 8),
-        _AddButton(
-          label: '予算を追加',
-          onTap: () => _showBudgetDialog(context, ref),
-        ),
-        const SizedBox(height: 80),
       ],
     );
   }
@@ -758,8 +768,10 @@ class _BudgetList extends ConsumerWidget {
                       .titleLarge
                       ?.copyWith(color: AppTheme.textDark)),
               const SizedBox(height: 4),
-              const Text('月々の特別に確保したい予算を記入しましょう',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+              const Text(
+                '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
               const SizedBox(height: 20),
               TextField(
                 controller: nameController,
@@ -771,7 +783,7 @@ class _BudgetList extends ConsumerWidget {
                 controller: amountController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                    hintText: '月額予算（万円）', suffixText: '万円'),
+                    hintText: '月額予算（万円/月）', suffixText: '万円/月'),
               ),
               const SizedBox(height: 12),
               Row(
@@ -982,6 +994,11 @@ class _BudgetCard extends ConsumerWidget {
                       .textTheme
                       .titleLarge
                       ?.copyWith(color: AppTheme.textDark)),
+              const SizedBox(height: 4),
+              const Text(
+                '毎月いくら確保したいか、月額を入力してください（例：推し活に月2万円）。',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
               const SizedBox(height: 20),
               TextField(controller: nameController,
                   decoration: const InputDecoration(hintText: '名前')),
@@ -990,7 +1007,7 @@ class _BudgetCard extends ConsumerWidget {
                 controller: amountController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                    hintText: '月額予算（万円）', suffixText: '万円'),
+                    hintText: '月額予算（万円/月）', suffixText: '万円/月'),
               ),
               const SizedBox(height: 12),
               Row(

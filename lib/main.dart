@@ -56,7 +56,7 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'My Budget Plan',
+      title: '攻める家計簿',
       theme: AppTheme.light(),
       routerConfig: router,
       debugShowCheckedModeBanner: false,

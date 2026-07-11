@@ -1,6 +1,6 @@
 {
-    "name": "my_budget_plan",
-    "short_name": "my_budget_plan",
+    "name": "攻める家計簿",
+    "short_name": "攻める家計簿",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

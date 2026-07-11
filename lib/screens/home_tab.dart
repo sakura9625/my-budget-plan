@@ -1,9 +1,46 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/calculation_provider.dart';
 import '../providers/review_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
+
+// 計画進捗を3段階に集約したもの（良好=safe/onTrack/comfortable、悪い=danger/needsReview、達成困難=difficult）
+enum _ProgressTier { good, bad, difficult }
+
+const String _noAffordDataComment = 'まずは予算とプロジェクトを登録しような！';
+
+// キャラのセリフ一覧（原資判定 × 計画進捗）。ここが唯一の管理場所。
+// 表にない組み合わせ（余裕あり×悪い/達成困難、要自粛×悪い）は _pigComment() 側のフォールバックで解決する。
+const Map<AffordStatus, Map<_ProgressTier, String>> _pigCommentTable = {
+  AffordStatus.comfortable: {
+    _ProgressTier.good:
+        'イケイケだな！余裕も計画もバッチリだ！次の目標いっちゃう？もっと遊ぼうぜ！',
+  },
+  AffordStatus.ok: {
+    _ProgressTier.good:
+        '計画は花マルだ、やったじゃないか！今月は使いすぎ注意、そこだけ気をつけな！',
+    _ProgressTier.bad:
+        'カネは回ってる、そこはOK！けど計画が遅れ気味だぞ？財布のヒモ、キュッといこう！',
+    _ProgressTier.difficult:
+        'カネはあるある！…が、このままじゃ目標ムリかも、マジかよ！計画、練り直しだな！',
+  },
+  AffordStatus.tight: {
+    _ProgressTier.good:
+        'これまでの蓄えはお見事！やるねぇ！でも今月はちょーっと大人しめでいこうな！',
+    _ProgressTier.bad:
+        '進みは遅い、余裕も少なめ…しょぼーんだぜ。今月はグッと我慢のしどころだ！',
+    _ProgressTier.difficult:
+        'うわ、これはマズいぞ～！支出をキュッと絞って、計画も立て直しだ。踏ん張れ！',
+  },
+  AffordStatus.critical: {
+    _ProgressTier.good:
+        '蓄えはバッチリなんだけどな～、手元が寂しい、目を疑うぜ！今は使うの我慢だ！',
+    _ProgressTier.difficult:
+        'カネも計画も赤信号、マジかよ～！でも大丈夫、思い切って計画を練り直そうぜ！',
+  },
+};
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
@@ -23,23 +60,15 @@ class HomeTab extends ConsumerWidget {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('My Budget Plan'),
+        title: const Text('攻める家計簿'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildHeadline(context, calc.headline),
-          const SizedBox(height: 8),
-          _buildAffordabilityDebugLabel(calc),
           const SizedBox(height: 20),
           _buildFreeAmountCard(context, calc),
           const SizedBox(height: 28),
-          if (calc.budgetCalculations.isNotEmpty) ...[
-            _buildSectionTitle(context, '予算'),
-            const SizedBox(height: 10),
-            ...calc.budgetCalculations.map((b) => _buildBudgetCard(context, b)),
-            const SizedBox(height: 28),
-          ],
           _buildSectionTitle(context, '年間計画'),
           const SizedBox(height: 10),
           _buildOverallCard(context, calc),
@@ -48,6 +77,12 @@ class HomeTab extends ConsumerWidget {
             _buildSectionTitle(context, 'プロジェクト・貯蓄'),
             const SizedBox(height: 10),
             ..._sortedGoals(calc).map((g) => _buildGoalCard(context, g)),
+            const SizedBox(height: 28),
+          ],
+          if (calc.budgetCalculations.isNotEmpty) ...[
+            _buildSectionTitle(context, '予算'),
+            const SizedBox(height: 10),
+            ...calc.budgetCalculations.map((b) => _buildBudgetCard(context, b)),
           ],
           const SizedBox(height: 80),
         ],
@@ -96,79 +131,182 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  // [DEBUG] 原資の健全性判定の確認用表示。本組み込みは別途対応予定。
-  Widget _buildAffordabilityDebugLabel(CalculationResult calc) {
-    final status = calc.affordabilityStatus;
-    if (status == null) {
-      return const SizedBox.shrink();
-    }
-    final label = AppTheme.affordStatusLabel(status);
-    final color = AppTheme.affordStatusColor(status);
-    final bgColor = AppTheme.affordStatusBgColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '[DEBUG] 原資の健全性: $label '
-        '(①動かせる金${Formatter.man(calc.movableFunds)} / 残高${Formatter.man(calc.totalBalance)} / '
-        '②予算${Formatter.man(calc.affordBudget)}+③プロジェクト${Formatter.man(calc.affordProject)}'
-        '=${Formatter.man(calc.affordBudget + calc.affordProject)} / ④自由枠${Formatter.man(calc.monthlyFreeAmount)})',
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
   Widget _buildFreeAmountCard(BuildContext context, CalculationResult calc) {
+    final hasGoals = calc.goalCalculations.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('月間自由枠',
-              style: TextStyle(color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
-          const SizedBox(height: 4),
-          Text(
-            Formatter.man(calc.monthlyFreeAmount),
-            style: const TextStyle(
-              color: AppTheme.navy,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            flex: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('今月使えるお金（月額）',
+                    style: TextStyle(
+                        color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
+                const SizedBox(height: 6),
+                Text(
+                  Formatter.man(calc.monthlyFreeAmount),
+                  style: const TextStyle(
+                    color: AppTheme.navy,
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (calc.affordabilityStatus != null) ...[
+                  const SizedBox(height: 10),
+                  _affordabilityBadge(calc.affordabilityStatus!),
+                ],
+                if (hasGoals) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text('計画進捗',
+                          style: TextStyle(
+                              color: AppTheme.navy.withOpacity(0.6),
+                              fontSize: 11)),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                            color: AppTheme.navy,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    _summaryChip('年間自由資金', Formatter.man(calc.annualFreeMoney)),
+                    const SizedBox(width: 16),
+                    _summaryChip('年間自由枠', Formatter.man(calc.annualFreeAmount)),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _summaryChip('年間自由資金', Formatter.man(calc.annualFreeMoney)),
-              const SizedBox(width: 16),
-              _summaryChip('年間自由枠', Formatter.man(calc.annualFreeAmount)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.navy.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'この金額を使い切った前提で、下記の進捗を計算しています。',
-              style: TextStyle(
-                color: AppTheme.navy,
-                fontSize: 11,
-                height: 1.5,
-              ),
-            ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 1,
+            child: _buildBuddyCharacter(calc),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildBuddyCharacter(CalculationResult calc) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2)),
+                ],
+              ),
+              child: Text(
+                _pigComment(
+                  afford: calc.affordabilityStatus,
+                  planStatus: calc.overallPlanStatus,
+                  hasGoals: calc.goalCalculations.isNotEmpty,
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                    height: 1.4),
+              ),
+            ),
+            Positioned(
+              bottom: -6,
+              child: Transform.rotate(
+                angle: pi / 4,
+                child: Container(width: 12, height: 12, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Image.asset(
+          'assets/characters/pig_common.png',
+          height: 92,
+          width: 92,
+          fit: BoxFit.contain,
+        ),
+      ],
+    );
+  }
+
+  Widget _affordabilityBadge(AffordStatus status) {
+    final label = AppTheme.affordStatusLabel(status);
+    final color = AppTheme.affordStatusColor(status);
+    final bgColor = AppTheme.affordStatusBgColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
+  // キャラのひとこと。原資判定(AffordStatus)×計画進捗(_ProgressTier)の組み合わせから引く。
+  // 予算・プロジェクトが1件もない場合のみ、判定不能として案内文を返す。
+  String _pigComment({
+    required AffordStatus? afford,
+    required PlanStatus? planStatus,
+    required bool hasGoals,
+  }) {
+    if (afford == null) return _noAffordDataComment;
+
+    final tier = hasGoals ? _progressTierOf(planStatus) : _ProgressTier.good;
+    final tierMap = _pigCommentTable[afford]!;
+    // 表にない組み合わせは、達成困難寄りにフォールバックし、それも無ければ良好にフォールバックする。
+    // （余裕あり×悪い/達成困難 → 1番。要自粛×悪い → 9番。いずれもこの2段階で解決する）
+    return tierMap[tier] ??
+        tierMap[_ProgressTier.difficult] ??
+        tierMap[_ProgressTier.good]!;
+  }
+
+  _ProgressTier _progressTierOf(PlanStatus? status) {
+    switch (status) {
+      case PlanStatus.comfortable:
+      case PlanStatus.onTrack:
+      case PlanStatus.safe:
+        return _ProgressTier.good;
+      case PlanStatus.danger:
+      case PlanStatus.needsReview:
+        return _ProgressTier.bad;
+      case PlanStatus.difficult:
+        return _ProgressTier.difficult;
+      case null:
+        return _ProgressTier.good;
+    }
   }
 
   Widget _summaryChip(String label, String value) {
@@ -250,7 +388,7 @@ class HomeTab extends ConsumerWidget {
               value: b.usageRate.clamp(0.0, 1.0),
               backgroundColor: Colors.grey.shade100,
               valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 6,
+              minHeight: 12,
             ),
           ),
         ],
@@ -470,7 +608,7 @@ class HomeTab extends ConsumerWidget {
       double progress, double plannedProgress, Color color) {
     final markerPosition = plannedProgress.clamp(0.0, 1.0);
     return SizedBox(
-      height: 12,
+      height: 20,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final markerX = markerPosition * constraints.maxWidth;
@@ -482,19 +620,19 @@ class HomeTab extends ConsumerWidget {
                 left: 0,
                 right: 0,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Colors.grey.shade100,
                     valueColor: AlwaysStoppedAnimation(color),
-                    minHeight: 8,
+                    minHeight: 16,
                   ),
                 ),
               ),
               Positioned(
                 left: (markerX - 0.75).clamp(0.0, constraints.maxWidth - 1.5),
                 top: 0,
-                child: const _DashedVerticalMarker(height: 12),
+                child: const _DashedVerticalMarker(height: 20),
               ),
             ],
           );

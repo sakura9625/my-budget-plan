@@ -14,6 +14,7 @@ import '../providers/calculation_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
+import '../widgets/pig_banner.dart';
 
 class ReviewTab extends ConsumerStatefulWidget {
   const ReviewTab({super.key});
@@ -33,18 +34,24 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(title: const Text('レビュー')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          _buildCurrentMonthCard(context, hasCurrentReview, now),
-          const SizedBox(height: 24),
-          if (reviews.isNotEmpty) ...[
-            Text('過去のレビュー',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ...reviews.map((r) => _buildReviewHistoryCard(context, r)),
-          ],
-          const SizedBox(height: 80),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildCurrentMonthCard(context, hasCurrentReview, now),
+                const SizedBox(height: 24),
+                if (reviews.isNotEmpty) ...[
+                  Text('過去のレビュー',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  ...reviews.map((r) => _buildReviewHistoryCard(context, r)),
+                ],
+              ],
+            ),
+          ),
+          const PigBanner('pig_navy_chair.png'),
         ],
       ),
     );

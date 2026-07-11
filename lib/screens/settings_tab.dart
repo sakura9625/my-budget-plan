@@ -136,7 +136,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      if (_reviewDay > 1) setState(() => _reviewDay--);
+                      setState(() =>
+                          _reviewDay = _reviewDay > 1 ? _reviewDay - 1 : 28);
                     },
                     icon: const Icon(Icons.remove_circle_outline,
                         color: AppTheme.primary),
@@ -150,7 +151,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                   ),
                   IconButton(
                     onPressed: () {
-                      if (_reviewDay < 28) setState(() => _reviewDay++);
+                      setState(() =>
+                          _reviewDay = _reviewDay < 28 ? _reviewDay + 1 : 1);
                     },
                     icon: const Icon(Icons.add_circle_outline,
                         color: AppTheme.primary),
