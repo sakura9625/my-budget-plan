@@ -103,7 +103,7 @@ class _Page1 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _OnboardingPage(
-      emoji: '😔',
+      emoji: null,
       title: 'お金のこと、こんなふうに思ったことはありませんか？',
       body: 'もっと貯金したい。\n趣味にもお金を使いたい。\n今月あといくら使っていいか分からない。\n\nでも、家計簿は続かない。',
       supplement: 'このアプリは、毎月1回・3つの入力だけで、あなたのお金の計画をサポートします。',
@@ -455,7 +455,7 @@ class _Page5 extends StatelessWidget {
 }
 
 class _OnboardingPage extends StatelessWidget {
-  final String emoji;
+  final String? emoji;
   final String title;
   final String body;
   final String? supplement;
@@ -467,7 +467,7 @@ class _OnboardingPage extends StatelessWidget {
   final String buttonLabel;
 
   const _OnboardingPage({
-    required this.emoji,
+    this.emoji,
     required this.title,
     required this.body,
     this.supplement,
@@ -487,8 +487,10 @@ class _OnboardingPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: topSpacing),
-          Text(emoji, style: const TextStyle(fontSize: 56)),
-          const SizedBox(height: 24),
+          if (emoji != null) ...[
+            Text(emoji!, style: const TextStyle(fontSize: 56)),
+            const SizedBox(height: 24),
+          ],
           Text(title, style: Theme.of(context).textTheme.displayLarge),
           const SizedBox(height: 16),
           Text(

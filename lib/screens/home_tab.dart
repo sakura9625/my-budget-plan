@@ -159,6 +159,8 @@ class HomeTab extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 10),
+                _summaryChip('別途予算枠', Formatter.man(calc.affordBudget)),
                 if (calc.affordabilityStatus != null) ...[
                   const SizedBox(height: 10),
                   _affordabilityBadge(calc.affordabilityStatus!),
@@ -192,8 +194,6 @@ class HomeTab extends ConsumerWidget {
                     _summaryChip('予算を除くと', Formatter.man(calc.annualFreeAmount)),
                   ],
                 ),
-                const SizedBox(height: 10),
-                _summaryChip('特別予算枠', Formatter.man(calc.affordBudget)),
               ],
             ),
           ),
@@ -253,8 +253,8 @@ class HomeTab extends ConsumerWidget {
         const SizedBox(height: 14),
         Image.asset(
           'assets/characters/pig_common.png',
-          height: 128,
-          width: 128,
+          height: 256,
+          width: 256,
           fit: BoxFit.contain,
         ),
       ],
