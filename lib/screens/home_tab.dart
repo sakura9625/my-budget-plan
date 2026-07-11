@@ -147,7 +147,7 @@ class HomeTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('今月使えるお金（月額）',
+                Text('毎月使える固定額',
                     style: TextStyle(
                         color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
                 const SizedBox(height: 6),
@@ -184,14 +184,16 @@ class HomeTab extends ConsumerWidget {
                     ],
                   ),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     _summaryChip('年間自由資金', Formatter.man(calc.annualFreeMoney)),
                     const SizedBox(width: 16),
-                    _summaryChip('年間自由枠', Formatter.man(calc.annualFreeAmount)),
+                    _summaryChip('予算を除くと', Formatter.man(calc.annualFreeAmount)),
                   ],
                 ),
+                const SizedBox(height: 10),
+                _summaryChip('特別予算枠', Formatter.man(calc.affordBudget)),
               ],
             ),
           ),
@@ -251,8 +253,8 @@ class HomeTab extends ConsumerWidget {
         const SizedBox(height: 14),
         Image.asset(
           'assets/characters/pig_common.png',
-          height: 92,
-          width: 92,
+          height: 128,
+          width: 128,
           fit: BoxFit.contain,
         ),
       ],
@@ -578,7 +580,7 @@ class HomeTab extends ConsumerWidget {
           if (g.remainingMonths > 0) ...[
             const SizedBox(height: 4),
             Text(
-              '必要月額 ${Formatter.man(g.requiredMonthlyAmount)} / 残${g.remainingMonths}ヶ月',
+              '必要月額 ${Formatter.man(g.displayRequiredMonthlyAmount)} / 残${g.remainingMonths}ヶ月',
               style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

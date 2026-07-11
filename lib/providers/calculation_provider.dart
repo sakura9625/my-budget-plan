@@ -44,7 +44,13 @@ class GoalCalculation {
   final double planProgress;
   final double plannedProgress;
   final PlanStatus planStatus;
+  // 配分比率の算出・原資健全性判定（affordProject）専用の内部値。
+  // (目標−確保済み)÷残月数。表示にはdisplayRequiredMonthlyAmountを使うこと。
   final double requiredMonthlyAmount;
+  // カード表示用の「必要月額」。(目標−配分額)÷残月数。
+  // 配分額（displayAmount）は原資判定・全体進捗と同じ既存の配分ロジックの結果を使うため、
+  // 循環参照は発生しない（配分比率の算出にはrequiredMonthlyAmountの方を使う）。
+  final double displayRequiredMonthlyAmount;
   final int remainingMonths;
 
   GoalCalculation({
@@ -56,6 +62,7 @@ class GoalCalculation {
     required this.plannedProgress,
     required this.planStatus,
     required this.requiredMonthlyAmount,
+    required this.displayRequiredMonthlyAmount,
     required this.remainingMonths,
   });
 }
@@ -262,6 +269,13 @@ CalculationResult _calculate(
 
     final planStatus = _toPlanStatus(planProgress);
 
+    // 必要月額（表示用）＝(目標−配分額)÷残月数。
+    // 「確保済み」ではなく、既に確定している配分額（displayAmount）を使う。
+    final remainingNeededByAllocation =
+        (goal.targetAmount - displayAmount).clamp(0.0, double.infinity);
+    final displayRequiredMonthlyAmount =
+        remainingNeededByAllocation / gi.remainingMonths;
+
     return GoalCalculation(
       goal: goal,
       virtualAmount: virtualAmount,
@@ -271,6 +285,7 @@ CalculationResult _calculate(
       plannedProgress: gi.plannedProgress,
       planStatus: planStatus,
       requiredMonthlyAmount: gi.requiredMonthlyAmount,
+      displayRequiredMonthlyAmount: displayRequiredMonthlyAmount,
       remainingMonths: gi.remainingMonths,
     );
   }).toList();
@@ -333,7 +348,9 @@ CalculationResult _calculate(
       '[calculation_provider] goal="${gc.goal.name}" manualAmount=${gc.goal.manualAmount} '
       'virtualAmount=${gc.virtualAmount} displayAmount=${gc.displayAmount} '
       'overallProgress=${gc.overallProgress} planProgress=${gc.planProgress} '
-      'planStatus=${gc.planStatus}',
+      'planStatus=${gc.planStatus} '
+      'displayRequiredMonthlyAmount=${gc.displayRequiredMonthlyAmount} '
+      'remainingMonths=${gc.remainingMonths}',
     );
   }
 
