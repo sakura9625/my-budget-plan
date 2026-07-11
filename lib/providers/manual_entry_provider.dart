@@ -23,6 +23,12 @@ class ManualEntryNotifier extends StateNotifier<List<ManualEntry>> {
     _load();
   }
 
+  // データリセット用（テスト・初期化用）
+  Future<void> clear() async {
+    await _box.clear();
+    _load();
+  }
+
   List<ManualEntry> forGoal(String goalId) {
     return state.where((e) => e.goalId == goalId).toList()
       ..sort((a, b) => b.date.compareTo(a.date));

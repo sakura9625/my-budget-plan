@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../models/app_settings.dart';
 import '../providers/settings_provider.dart';
+import '../providers/goal_provider.dart';
+import '../providers/budget_provider.dart';
+import '../providers/manual_entry_provider.dart';
+import '../providers/budget_entry_provider.dart';
+import '../providers/review_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 import '../services/notification_service.dart';
@@ -210,10 +216,63 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               _buildInfoRow('データ保存', 'ローカル（端末内）'),
             ],
           ),
+          // TODO: リリース前に扱いを検討（テスト・初期化用のデータリセット機能。
+          // 正式リリース時は非表示にするか、開発者メニュー等に隔離するか判断すること）
+          const SizedBox(height: 40),
+          OutlinedButton.icon(
+            onPressed: () => _confirmResetAll(context),
+            icon: const Icon(Icons.delete_forever_outlined, color: AppTheme.danger),
+            label: const Text('データをすべてリセット'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+              side: const BorderSide(color: AppTheme.danger),
+            ),
+          ),
           const SizedBox(height: 80),
         ],
       ),
     );
+  }
+
+  // TODO: リリース前に扱いを検討（テスト・初期化用のデータリセット機能）
+  void _confirmResetAll(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('データをリセット'),
+        content: const Text(
+          'すべてのデータ（設定・プロジェクト・予算・レビュー・残高）が消え、\n初回起動の状態に戻ります。よろしいですか？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('キャンセル'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _resetAllData();
+            },
+            child: const Text('リセットする',
+                style: TextStyle(color: AppTheme.danger)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TODO: リリース前に扱いを検討（テスト・初期化用のデータリセット機能）
+  Future<void> _resetAllData() async {
+    await ref.read(settingsProvider.notifier).clear();
+    await ref.read(goalProvider.notifier).clear();
+    await ref.read(budgetProvider.notifier).clear();
+    await ref.read(manualEntryProvider.notifier).clear();
+    await ref.read(budgetEntryProvider.notifier).clear();
+    await ref.read(reviewProvider.notifier).clear();
+
+    if (mounted) {
+      context.go('/onboarding');
+    }
   }
 
   Widget _buildSection(

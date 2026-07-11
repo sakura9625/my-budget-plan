@@ -5,6 +5,7 @@ import '../providers/calculation_provider.dart';
 import '../providers/review_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
+import '../widgets/pig_background_body.dart';
 
 // 計画進捗を3段階に集約したもの（良好=safe/onTrack/comfortable、悪い=danger/needsReview、達成困難=difficult）
 enum _ProgressTier { good, bad, difficult }
@@ -62,8 +63,8 @@ class HomeTab extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('攻める家計簿'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: PigBackgroundBody(
+        pigAsset: 'pig_navy_chair.png',
         children: [
           _buildHeadline(context, calc.headline),
           const SizedBox(height: 20),
@@ -84,7 +85,6 @@ class HomeTab extends ConsumerWidget {
             const SizedBox(height: 10),
             ...calc.budgetCalculations.map((b) => _buildBudgetCard(context, b)),
           ],
-          const SizedBox(height: 80),
         ],
       ),
     );

@@ -33,6 +33,12 @@ class GoalNotifier extends StateNotifier<List<Goal>> {
     _load();
   }
 
+  // データリセット用（テスト・初期化用）
+  Future<void> clear() async {
+    await _box.clear();
+    _load();
+  }
+
   List<Goal> get activeGoals =>
       state.where((g) => g.status == GoalStatus.active).toList();
 }

@@ -23,6 +23,12 @@ class BudgetEntryNotifier extends StateNotifier<List<BudgetEntry>> {
     _load();
   }
 
+  // データリセット用（テスト・初期化用）
+  Future<void> clear() async {
+    await _box.clear();
+    _load();
+  }
+
   List<BudgetEntry> forBudget(String budgetId) {
     return state.where((e) => e.budgetId == budgetId).toList()
       ..sort((a, b) => b.date.compareTo(a.date));

@@ -26,26 +26,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _tabs,
-          ),
-          if (_currentIndex == 0)
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: IgnorePointer(
-                child: Image.asset(
-                  'assets/characters/pig_navy_chair.png',
-                  width: 96,
-                  height: 72,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-        ],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _tabs,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,

@@ -27,6 +27,12 @@ class ReviewNotifier extends StateNotifier<List<Review>> {
     _load();
   }
 
+  // データリセット用（テスト・初期化用）
+  Future<void> clear() async {
+    await _box.clear();
+    _load();
+  }
+
   Review? get latest => state.isNotEmpty ? state.first : null;
 
   Review? getByYearMonth(int year, int month) {
