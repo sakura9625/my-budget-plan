@@ -254,59 +254,67 @@ class HomeTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            flex: 1,
-            child: _buildBuddyCharacter(calc),
-          ),
+          // 右側（キャラ）はflex等分ではなく、画面幅比率で決めた固定サイズにする。
+          // Expanded(flex:1)で50%等分すると、その半分幅が実際の頭打ちの上限になり、
+          // 画面が広い端末（iPad等）ほどこの上限に余裕ができて大きく見え、
+          // 画面が狭い端末（iPhone）では既に上限に張り付いていて拡大が効かなくなる。
+          _buildBuddyCharacter(context, calc),
         ],
       ),
     );
   }
 
-  Widget _buildBuddyCharacter(CalculationResult calc) {
+  Widget _buildBuddyCharacter(BuildContext context, CalculationResult calc) {
+    // 画面幅に対する比率でキャラのサイズを決める。固定pxではなく比率にすることで、
+    // iPhone・iPadなど画面幅が異なる端末でも同じ見え方（同じ比率）になる。
+    final pigWidth = MediaQuery.of(context).size.width * 0.44;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(0, 2)),
-                ],
-              ),
-              child: Text(
-                _pigComment(
-                  afford: calc.affordabilityStatus,
-                  planStatus: calc.overallPlanStatus,
-                  hasGoals: calc.goalCalculations.isNotEmpty,
-                  monthlyFreeAmount: calc.monthlyFreeAmount,
-                  movableFunds: calc.movableFunds,
+        SizedBox(
+          width: pigWidth,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: Offset(0, 2)),
+                  ],
                 ),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
-                    height: 1.4),
+                child: Text(
+                  _pigComment(
+                    afford: calc.affordabilityStatus,
+                    planStatus: calc.overallPlanStatus,
+                    hasGoals: calc.goalCalculations.isNotEmpty,
+                    monthlyFreeAmount: calc.monthlyFreeAmount,
+                    movableFunds: calc.movableFunds,
+                  ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                      height: 1.4),
+                ),
               ),
-            ),
-            Positioned(
-              bottom: -6,
-              child: Transform.rotate(
-                angle: pi / 4,
-                child: Container(width: 12, height: 12, color: Colors.white),
+              Positioned(
+                bottom: -6,
+                child: Transform.rotate(
+                  angle: pi / 4,
+                  child: Container(width: 12, height: 12, color: Colors.white),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 10),
         // pig_common.pngは横長素材（1408x768）のため、高さも固定するとレターボックス状の
@@ -315,7 +323,7 @@ class HomeTab extends ConsumerWidget {
         // 直下の位置）は動かず、下方向にだけ拡大される。
         Image.asset(
           'assets/characters/pig_common.png',
-          width: 425,
+          width: pigWidth,
           fit: BoxFit.contain,
         ),
       ],
