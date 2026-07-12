@@ -189,11 +189,16 @@ class HomeTab extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final pigWidth = constraints.maxWidth * 0.55;
-        // pig_common.pngは1408x768の横長素材。widthのみ指定し高さは元画像の比率で自動計算する。
-        final pigHeight = pigWidth / (1408 / 768);
+        // pig_common.pngはトリミング済みの正方形素材（769x768）。widthのみ指定し
+        // 高さは元画像の比率で自動計算する。
+        final pigHeight = pigWidth / (769 / 768);
+        // 吹き出しは顔より少し広めにして、テキストが窮屈にならないようにする。
+        final bubbleWidth = constraints.maxWidth * 0.64;
         // 吹き出し＋顔がテキスト列と重ならないよう、テキスト列側にもその分の高さを確保する
-        // （吹き出しの文字数で高さが変わるため、長めのセリフでも収まる余裕を持たせた概算値）。
-        const bubbleHeightEstimate = 130.0;
+        // （吹き出しの文字数で高さが変わるため、長めのセリフでも2〜3行で収まる想定の概算値）。
+        const bubbleHeightEstimate = 100.0;
+        // 顔をカード下端にべったり付けないための余白（近づけつつ少し余裕を残す）。
+        const pigBottomSpacing = 16.0;
 
         return _buildFreeAmountCardContent(
           context,
@@ -201,7 +206,9 @@ class HomeTab extends ConsumerWidget {
           hasGoals,
           pigWidth,
           pigHeight,
+          bubbleWidth,
           bubbleHeightEstimate,
+          pigBottomSpacing,
         );
       },
     );
@@ -213,7 +220,9 @@ class HomeTab extends ConsumerWidget {
     bool hasGoals,
     double pigWidth,
     double pigHeight,
+    double bubbleWidth,
     double bubbleHeightEstimate,
+    double pigBottomSpacing,
   ) {
     return ClipRRect(
       // 顔をカードの右下角ぴったりまで届かせる（Positionedでカード端に直接配置する）ため、
@@ -303,31 +312,33 @@ class HomeTab extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   // 右側は吹き出し＋顔の分だけ幅・高さを確保するプレースホルダー。
-                  // 吹き出しと顔本体はこの下でPositionedとしてカード右上・右下に直接配置する
-                  // ため、ここでは左のテキスト列と重ならないためのスペース確保のみ行う。
+                  // 吹き出しと顔本体はこの下でPositionedとしてまとめて配置するため、
+                  // ここでは左のテキスト列と重ならないためのスペース確保のみ行う。
                   SizedBox(
-                    width: pigWidth,
-                    height: bubbleHeightEstimate + 10 + pigHeight,
+                    width: bubbleWidth,
+                    height: bubbleHeightEstimate + 10 + pigHeight + pigBottomSpacing,
                   ),
                 ],
               ),
             ),
-            // 吹き出し：右側のテキスト列と同じ列（カード右上寄り、通常のパディング内）に表示。
+            // 吹き出し＋顔を「ひとかたまり」として、カード下寄りにまとめて配置する
+            // （中央寄せだと顔の下に余白が空きすぎるため、下寄り＋余白少なめにする）。
+            // 右側にも少し余白を持たせ、吹き出しがカード右端にくっつかないようにする。
             Positioned(
-              top: 14,
-              right: 20,
-              child: _buildSpeechBubble(calc, pigWidth),
-            ),
-            // 顔：カードの右下角にぴったり配置する（右・下のパディングを無視して端まで届かせる）。
-            // Columnで下に伸ばしていた頃と同じく、widthのみ指定し高さは元画像の比率で自動計算する
-            // （pig_common.pngは横長素材のため、高さも固定するとレターボックス状の余白ができる）。
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Image.asset(
-                'assets/characters/pig_common.png',
-                width: pigWidth,
-                fit: BoxFit.contain,
+              bottom: pigBottomSpacing,
+              right: 14,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildSpeechBubble(calc, bubbleWidth),
+                  const SizedBox(height: 10),
+                  Image.asset(
+                    'assets/characters/pig_common.png',
+                    width: pigWidth,
+                    fit: BoxFit.contain,
+                  ),
+                ],
               ),
             ),
           ],
@@ -336,9 +347,9 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildSpeechBubble(CalculationResult calc, double pigWidth) {
+  Widget _buildSpeechBubble(CalculationResult calc, double bubbleWidth) {
     return SizedBox(
-      width: pigWidth,
+      width: bubbleWidth,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
