@@ -180,20 +180,62 @@ class HomeTab extends ConsumerWidget {
 
   Widget _buildFreeAmountCard(BuildContext context, CalculationResult calc) {
     final hasGoals = calc.goalCalculations.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+
+    // カードの実際の描画幅を基準にキャラのサイズを決める。MediaQuery.size.widthは
+    // ウィンドウ/ビューポート全体の幅であり、Web版ではスクロールバー分などの差異で
+    // 実際にカードへ割り当てられる幅と数px〜十数pxずれることがあり、それが右端の
+    // オーバーフローの原因になる。LayoutBuilderでこのカード自身の実測幅を使うことで
+    // 常にレイアウトと矛盾しないサイズにする。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final pigWidth = constraints.maxWidth * 0.55;
+        // pig_common.pngは1408x768の横長素材。widthのみ指定し高さは元画像の比率で自動計算する。
+        final pigHeight = pigWidth / (1408 / 768);
+        // 吹き出し＋顔がテキスト列と重ならないよう、テキスト列側にもその分の高さを確保する
+        // （吹き出しの文字数で高さが変わるため、長めのセリフでも収まる余裕を持たせた概算値）。
+        const bubbleHeightEstimate = 130.0;
+
+        return _buildFreeAmountCardContent(
+          context,
+          calc,
+          hasGoals,
+          pigWidth,
+          pigHeight,
+          bubbleHeightEstimate,
+        );
+      },
+    );
+  }
+
+  Widget _buildFreeAmountCardContent(
+    BuildContext context,
+    CalculationResult calc,
+    bool hasGoals,
+    double pigWidth,
+    double pigHeight,
+    double bubbleHeightEstimate,
+  ) {
+    return ClipRRect(
+      // 顔をカードの右下角ぴったりまで届かせる（Positionedでカード端に直接配置する）ため、
+      // 角の外に絵がはみ出さないよう、カードの角丸に合わせてクリップする。
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                 // 1. 今月 動かせるお金
                 Text('今月 動かせるお金',
                     style: TextStyle(
@@ -243,90 +285,99 @@ class HomeTab extends ConsumerWidget {
                 ],
                 // 6. 年間自由資金 / 予算を除くと（横並び1行）
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _summaryChip('年間自由資金', Formatter.man(calc.annualFreeMoney)),
-                    const SizedBox(width: 16),
-                    _summaryChip('予算を除くと', Formatter.man(calc.annualFreeAmount)),
-                  ],
-                ),
-              ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _summaryChip('年間自由資金',
+                                  Formatter.man(calc.annualFreeMoney)),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _summaryChip('予算を除くと',
+                                  Formatter.man(calc.annualFreeAmount)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // 右側は吹き出し＋顔の分だけ幅・高さを確保するプレースホルダー。
+                  // 吹き出しと顔本体はこの下でPositionedとしてカード右上・右下に直接配置する
+                  // ため、ここでは左のテキスト列と重ならないためのスペース確保のみ行う。
+                  SizedBox(
+                    width: pigWidth,
+                    height: bubbleHeightEstimate + 10 + pigHeight,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // 右側（キャラ）はflex等分ではなく、画面幅比率で決めた固定サイズにする。
-          // Expanded(flex:1)で50%等分すると、その半分幅が実際の頭打ちの上限になり、
-          // 画面が広い端末（iPad等）ほどこの上限に余裕ができて大きく見え、
-          // 画面が狭い端末（iPhone）では既に上限に張り付いていて拡大が効かなくなる。
-          _buildBuddyCharacter(context, calc),
-        ],
+            // 吹き出し：右側のテキスト列と同じ列（カード右上寄り、通常のパディング内）に表示。
+            Positioned(
+              top: 14,
+              right: 20,
+              child: _buildSpeechBubble(calc, pigWidth),
+            ),
+            // 顔：カードの右下角にぴったり配置する（右・下のパディングを無視して端まで届かせる）。
+            // Columnで下に伸ばしていた頃と同じく、widthのみ指定し高さは元画像の比率で自動計算する
+            // （pig_common.pngは横長素材のため、高さも固定するとレターボックス状の余白ができる）。
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Image.asset(
+                'assets/characters/pig_common.png',
+                width: pigWidth,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBuddyCharacter(BuildContext context, CalculationResult calc) {
-    // 画面幅に対する比率でキャラのサイズを決める。固定pxではなく比率にすることで、
-    // iPhone・iPadなど画面幅が異なる端末でも同じ見え方（同じ比率）になる。
-    final pigWidth = MediaQuery.of(context).size.width * 0.44;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: pigWidth,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [
-                    BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 4,
-                        offset: Offset(0, 2)),
-                  ],
-                ),
-                child: Text(
-                  _pigComment(
-                    afford: calc.affordabilityStatus,
-                    planStatus: calc.overallPlanStatus,
-                    hasGoals: calc.goalCalculations.isNotEmpty,
-                    monthlyFreeAmount: calc.monthlyFreeAmount,
-                    movableFunds: calc.movableFunds,
-                  ),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textDark,
-                      height: 1.4),
-                ),
+  Widget _buildSpeechBubble(CalculationResult calc, double pigWidth) {
+    return SizedBox(
+      width: pigWidth,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Text(
+              _pigComment(
+                afford: calc.affordabilityStatus,
+                planStatus: calc.overallPlanStatus,
+                hasGoals: calc.goalCalculations.isNotEmpty,
+                monthlyFreeAmount: calc.monthlyFreeAmount,
+                movableFunds: calc.movableFunds,
               ),
-              Positioned(
-                bottom: -6,
-                child: Transform.rotate(
-                  angle: pi / 4,
-                  child: Container(width: 12, height: 12, color: Colors.white),
-                ),
-              ),
-            ],
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                  height: 1.4),
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
-        // pig_common.pngは横長素材（1408x768）のため、高さも固定するとレターボックス状の
-        // 余白ができてしまう。widthのみ指定し、高さは元画像の比率で自動計算させる。
-        // Columnは上から順に並ぶだけなので、ここでwidthを増やしても顔の上端（吹き出し
-        // 直下の位置）は動かず、下方向にだけ拡大される。
-        Image.asset(
-          'assets/characters/pig_common.png',
-          width: pigWidth,
-          fit: BoxFit.contain,
-        ),
-      ],
+          Positioned(
+            bottom: -6,
+            child: Transform.rotate(
+              angle: pi / 4,
+              child: Container(width: 12, height: 12, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
