@@ -147,26 +147,34 @@ class HomeTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('毎月使える固定額',
+                // 1. 今月 動かせるお金
+                Text('今月 動かせるお金',
                     style: TextStyle(
                         color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
                 const SizedBox(height: 6),
                 Text(
-                  Formatter.man(calc.monthlyFreeAmount),
+                  Formatter.man(calc.movableFunds),
                   style: const TextStyle(
                     color: AppTheme.navy,
                     fontSize: 34,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 10),
-                _summaryChip('別途予算枠', Formatter.man(calc.affordBudget)),
+                // 2. 原資判定バッジ
                 if (calc.affordabilityStatus != null) ...[
                   const SizedBox(height: 10),
                   _affordabilityBadge(calc.affordabilityStatus!),
                 ],
+                const SizedBox(height: 14),
+                // 3. 初期計画時の月間自由枠
+                _summaryChip(
+                    '初期計画時の月間自由枠', Formatter.man(calc.monthlyFreeAmount)),
+                const SizedBox(height: 10),
+                // 4. 予算枠
+                _summaryChip('予算枠', Formatter.man(calc.affordBudget)),
+                // 5. 計画進捗
                 if (hasGoals) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
@@ -186,6 +194,7 @@ class HomeTab extends ConsumerWidget {
                     ],
                   ),
                 ],
+                // 6. 年間自由資金 / 予算を除くと（横並び1行）
                 const SizedBox(height: 14),
                 Row(
                   children: [

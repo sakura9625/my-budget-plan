@@ -23,6 +23,11 @@ class BudgetEntryNotifier extends StateNotifier<List<BudgetEntry>> {
     _load();
   }
 
+  Future<void> update(BudgetEntry entry) async {
+    await _box.put(entry.id, entry);
+    _load();
+  }
+
   // データリセット用（テスト・初期化用）
   Future<void> clear() async {
     await _box.clear();

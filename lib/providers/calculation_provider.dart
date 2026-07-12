@@ -44,12 +44,12 @@ class GoalCalculation {
   final double planProgress;
   final double plannedProgress;
   final PlanStatus planStatus;
-  // 配分比率の算出・原資健全性判定（affordProject）専用の内部値。
-  // (目標−確保済み)÷残月数。表示にはdisplayRequiredMonthlyAmountを使うこと。
+  // 複数PJT按分比率（ratio）専用の内部値。(目標−確保済み)÷残月数。
+  // 割振り分ベースにすると循環（割振り分→必要月額→ratio→割振り分）が発生するため、
+  // 按分比率の算出以外（表示・原資判定）にはdisplayRequiredMonthlyAmountを使うこと。
   final double requiredMonthlyAmount;
-  // カード表示用の「必要月額」。(目標−配分額)÷残月数。
-  // 配分額（displayAmount）は原資判定・全体進捗と同じ既存の配分ロジックの結果を使うため、
-  // 循環参照は発生しない（配分比率の算出にはrequiredMonthlyAmountの方を使う）。
+  // カード表示用・原資健全性判定（affordProject）用の「PJT必要月額」。
+  // (目標−PJT割振り分−確保済み)÷残月数。全体進捗の分子（割振り分+確保済み）と揃えてある。
   final double displayRequiredMonthlyAmount;
   final int remainingMonths;
 
@@ -232,19 +232,37 @@ CalculationResult _calculate(
     );
   }).toList();
 
-  // ①動かせる金＝総残高−Σ(PJT積立分)＋Σ(確保済み)（全アクティブGoal合計）
+  // あるべき進捗額合計・確保済み合計（全アクティブGoal合計）
   final sumPjtAccumulated = goalIntermediates.fold(0.0, (sum, gi) => sum + gi.pjtAccumulated);
   final sumManualAmount = activeGoals.fold(0.0, (sum, g) => sum + g.manualAmount);
-  final movableFunds = effectiveBalance - sumPjtAccumulated + sumManualAmount;
 
-  // pot＝①−④−②（PJTに回せる総額。マイナスもあり得る）
-  final goalAllocatablePot = movableFunds - monthlyFreeAmount - affordBudget;
+  // 余剰金＝MAX(0, 口座残高−④月間自由枠−②予算月額)。マイナスにはしない。
+  final surplus = (effectiveBalance - monthlyFreeAmount - affordBudget)
+      .clamp(0.0, double.infinity);
+
+  // PJT割振り分（全体）＝余剰金の大きさに応じた階段式で決定する。
+  // 4段目（あるべき進捗額−確保済み）だけ確保済みを差し引き、他の段では差し引かない。
+  final double goalAllocatablePot;
+  if (surplus > sumPjtAccumulated * 1.2) {
+    goalAllocatablePot = sumPjtAccumulated * 1.2;
+  } else if (surplus > sumPjtAccumulated * 1.1) {
+    goalAllocatablePot = sumPjtAccumulated * 1.1;
+  } else if (surplus > sumPjtAccumulated) {
+    goalAllocatablePot = sumPjtAccumulated;
+  } else if (surplus > sumPjtAccumulated - sumManualAmount) {
+    goalAllocatablePot = sumPjtAccumulated - sumManualAmount;
+  } else {
+    goalAllocatablePot = surplus;
+  }
+
+  // ①動かせるお金＝口座残高−PJT割振り分（全体）
+  final movableFunds = effectiveBalance - goalAllocatablePot;
 
   // 比率(各Goal)＝requiredMonthlyAmount÷Σ(全activeGoalのrequiredMonthlyAmount)
   final sumRequiredMonthly =
       goalIntermediates.fold(0.0, (sum, gi) => sum + gi.requiredMonthlyAmount);
 
-  // Goal計算 第2段：potを比率配分し、全体進捗などを確定する
+  // Goal計算 第2段：PJT割振り分（全体）を比率配分し、全体進捗などを確定する
   final goalCalculations = goalIntermediates.map((gi) {
     final goal = gi.goal;
     final ratio = sumRequiredMonthly > 0 ? gi.requiredMonthlyAmount / sumRequiredMonthly : 0.0;
@@ -269,10 +287,10 @@ CalculationResult _calculate(
 
     final planStatus = _toPlanStatus(planProgress);
 
-    // 必要月額（表示用）＝(目標−配分額)÷残月数。
-    // 「確保済み」ではなく、既に確定している配分額（displayAmount）を使う。
+    // PJT必要月額（表示用・原資判定用）＝(目標−PJT割振り分−確保済み)÷残月数。
+    // 全体進捗の分子（割振り分+確保済み）と揃え、目標との差分を残月数で割る。
     final remainingNeededByAllocation =
-        (goal.targetAmount - displayAmount).clamp(0.0, double.infinity);
+        (goal.targetAmount - virtualAmount - goal.manualAmount).clamp(0.0, double.infinity);
     final displayRequiredMonthlyAmount =
         remainingNeededByAllocation / gi.remainingMonths;
 
@@ -304,13 +322,15 @@ CalculationResult _calculate(
 
   final overallPlanStatus = hasNoGoals ? null : _toPlanStatus(totalPlanProgress);
 
-  // ③PJT必要月額の合計（期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外）
+  // ③PJT必要月額の合計＝displayRequiredMonthlyAmount（新・必要月額）の合計。
+  // 按分比率用のrequiredMonthlyAmount（目標−確保済み）÷残月数）とは別物（循環回避のため据え置き）。
+  // 期間終了済みのプロジェクトはゼロ割・過剰加算を避けるため除外。
   double affordProject = 0;
   for (final gc in goalCalculations) {
     final rawRemaining =
         (gc.goal.endYear * 12 + gc.goal.endMonth) - nowMonthTotal + 1;
     if (rawRemaining <= 0) continue;
-    affordProject += gc.requiredMonthlyAmount;
+    affordProject += gc.displayRequiredMonthlyAmount;
   }
   // 原資の健全性判定（①動かせる金で②③（＋④）をまかなえるか）
   final affordabilityStatus = _toAffordabilityStatus(
@@ -339,7 +359,9 @@ CalculationResult _calculate(
     '[calculation_provider] annualFreeMoney=$annualFreeMoney '
     'totalGoalAnnual=$totalGoalAnnual totalBudgetAnnual=$totalBudgetAnnual '
     'annualFreeAmount=$annualFreeAmount monthlyFreeAmount=$monthlyFreeAmount '
-    'effectiveBalance=$effectiveBalance movableFunds=$movableFunds goalAllocatablePot=$goalAllocatablePot '
+    'effectiveBalance=$effectiveBalance surplus=$surplus '
+    'sumPjtAccumulated(あるべき進捗額合計)=$sumPjtAccumulated sumManualAmount(確保済み合計)=$sumManualAmount '
+    'goalAllocatablePot(PJT割振り分合計)=$goalAllocatablePot movableFunds(動かせるお金)=$movableFunds '
     'totalOverallProgress=$totalOverallProgress totalPlanProgress=$totalPlanProgress '
     'overallPlanStatus=$overallPlanStatus',
   );

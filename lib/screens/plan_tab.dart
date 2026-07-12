@@ -4,9 +4,11 @@ import 'package:uuid/uuid.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/manual_entry.dart';
+import '../models/budget_entry.dart';
 import '../providers/goal_provider.dart';
 import '../providers/budget_provider.dart';
 import '../providers/manual_entry_provider.dart';
+import '../providers/budget_entry_provider.dart';
 import '../providers/calculation_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
@@ -384,16 +386,28 @@ class _GoalCard extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${e.date.year}/${e.date.month}/${e.date.day}${e.memo != null ? ' · ${e.memo}' : ''}',
-                        style:
-                            const TextStyle(fontSize: 11, color: Colors.grey),
+                      Expanded(
+                        child: Text(
+                          '${e.date.year}/${e.date.month}/${e.date.day}${e.memo != null ? ' · ${e.memo}' : ''}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey),
+                        ),
                       ),
                       Text(Formatter.man(e.amount),
                           style: const TextStyle(
                               fontSize: 12,
                               color: AppTheme.primary,
                               fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () =>
+                            _showManualEntryDialog(context, ref, existing: e),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(Icons.edit_outlined,
+                              size: 14, color: Colors.grey),
+                        ),
+                      ),
                     ],
                   ),
                 )),
@@ -436,9 +450,12 @@ class _GoalCard extends ConsumerWidget {
     );
   }
 
-  void _showManualEntryDialog(BuildContext context, WidgetRef ref) {
-    final amountController = TextEditingController();
-    final memoController = TextEditingController();
+  void _showManualEntryDialog(BuildContext context, WidgetRef ref,
+      {ManualEntry? existing}) {
+    final isEdit = existing != null;
+    final amountController = TextEditingController(
+        text: existing?.amount.toStringAsFixed(0) ?? '');
+    final memoController = TextEditingController(text: existing?.memo ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -467,7 +484,7 @@ class _GoalCard extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('確保済み金額を入力',
+                Text(isEdit ? '確保済み金額を編集' : '確保済み金額を入力',
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
@@ -498,23 +515,35 @@ class _GoalCard extends ConsumerWidget {
                   onPressed: () async {
                     final amount = double.tryParse(amountController.text) ?? 0;
                     if (amount <= 0) return;
+                    final memo = memoController.text.isEmpty
+                        ? null
+                        : memoController.text;
 
-                    final entry = ManualEntry(
-                      id: const Uuid().v4(),
-                      goalId: goal.id,
-                      amount: amount,
-                      date: DateTime.now(),
-                      memo: memoController.text.isEmpty
-                          ? null
-                          : memoController.text,
-                    );
-                    await ref.read(manualEntryProvider.notifier).add(entry);
-                    goal.manualAmount += amount;
-                    await ref.read(goalProvider.notifier).update(goal);
+                    if (isEdit) {
+                      final delta = amount - existing.amount;
+                      existing.amount = amount;
+                      existing.memo = memo;
+                      await ref
+                          .read(manualEntryProvider.notifier)
+                          .update(existing);
+                      goal.manualAmount += delta;
+                      await ref.read(goalProvider.notifier).update(goal);
+                    } else {
+                      final entry = ManualEntry(
+                        id: const Uuid().v4(),
+                        goalId: goal.id,
+                        amount: amount,
+                        date: DateTime.now(),
+                        memo: memo,
+                      );
+                      await ref.read(manualEntryProvider.notifier).add(entry);
+                      goal.manualAmount += amount;
+                      await ref.read(goalProvider.notifier).update(goal);
+                    }
 
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text('追加'),
+                  child: Text(isEdit ? '保存' : '追加'),
                 ),
               ],
             ),
@@ -917,6 +946,7 @@ class _BudgetCard extends ConsumerWidget {
         : const Color(0xFFF5F5F5);
     final label = calc != null ? AppTheme.budgetStatusLabel(calc!.status) : '-';
     final progress = (calc?.usageRate ?? 0).clamp(0.0, 1.0);
+    final entries = ref.watch(budgetEntryProvider.notifier).forBudget(budget.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -987,8 +1017,14 @@ class _BudgetCard extends ConsumerWidget {
           ),
           const Divider(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              _actionButton(
+                icon: Icons.add_circle_outline,
+                label: '使用済み金額を入力',
+                color: AppTheme.primary,
+                onTap: () => _showUsedAmountDialog(context, ref),
+              ),
+              const Spacer(),
               GestureDetector(
                 onTap: () => _showEditDialog(context, ref),
                 child: const Padding(
@@ -1008,7 +1044,167 @@ class _BudgetCard extends ConsumerWidget {
               ),
             ],
           ),
+          // 利用履歴
+          if (entries.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Text('利用履歴',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF6B7280))),
+            const SizedBox(height: 4),
+            ...entries.take(3).map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${e.date.year}/${e.date.month}/${e.date.day}${e.memo != null ? ' · ${e.memo}' : ''}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey),
+                        ),
+                      ),
+                      Text(Formatter.man(e.amount),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () =>
+                            _showUsedAmountDialog(context, ref, existing: e),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(Icons.edit_outlined,
+                              size: 14, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  void _showUsedAmountDialog(BuildContext context, WidgetRef ref,
+      {BudgetEntry? existing}) {
+    final isEdit = existing != null;
+    final amountController = TextEditingController(
+        text: existing?.amount.toStringAsFixed(0) ?? '');
+    final memoController = TextEditingController(text: existing?.memo ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(sheetContext).unfocus(),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(isEdit ? '使用済み金額を編集' : '使用済み金額を入力',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(color: AppTheme.textDark)),
+                const SizedBox(height: 8),
+                Text(
+                  '実際に使った金額を入力してください。',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: const Color(0xFF6B7280)),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration:
+                      const InputDecoration(hintText: '例：2', suffixText: '万円'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: memoController,
+                  decoration: const InputDecoration(hintText: 'メモ（任意）'),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    final amount = double.tryParse(amountController.text) ?? 0;
+                    if (amount <= 0) return;
+                    final memo = memoController.text.isEmpty
+                        ? null
+                        : memoController.text;
+
+                    if (isEdit) {
+                      final delta = amount - existing.amount;
+                      existing.amount = amount;
+                      existing.memo = memo;
+                      await ref
+                          .read(budgetEntryProvider.notifier)
+                          .update(existing);
+                      budget.usedAmount += delta;
+                      await ref.read(budgetProvider.notifier).update(budget);
+                    } else {
+                      final entry = BudgetEntry(
+                        id: const Uuid().v4(),
+                        budgetId: budget.id,
+                        amount: amount,
+                        date: DateTime.now(),
+                        memo: memo,
+                      );
+                      await ref.read(budgetEntryProvider.notifier).add(entry);
+                      budget.usedAmount += amount;
+                      await ref.read(budgetProvider.notifier).update(budget);
+                    }
+
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: Text(isEdit ? '保存' : '追加'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
