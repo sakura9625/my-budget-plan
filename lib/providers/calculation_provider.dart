@@ -242,18 +242,20 @@ CalculationResult _calculate(
 
   // PJT割振り分（全体）＝余剰金の大きさに応じた階段式で決定する。
   // 4段目（あるべき進捗額−確保済み）だけ確保済みを差し引き、他の段では差し引かない。
-  final double goalAllocatablePot;
+  // 4段目は確保済みが大きいとマイナスになり得るため、下限0でクランプする。
+  final double rawGoalAllocatablePot;
   if (surplus > sumPjtAccumulated * 1.2) {
-    goalAllocatablePot = sumPjtAccumulated * 1.2;
+    rawGoalAllocatablePot = sumPjtAccumulated * 1.2;
   } else if (surplus > sumPjtAccumulated * 1.1) {
-    goalAllocatablePot = sumPjtAccumulated * 1.1;
+    rawGoalAllocatablePot = sumPjtAccumulated * 1.1;
   } else if (surplus > sumPjtAccumulated) {
-    goalAllocatablePot = sumPjtAccumulated;
+    rawGoalAllocatablePot = sumPjtAccumulated;
   } else if (surplus > sumPjtAccumulated - sumManualAmount) {
-    goalAllocatablePot = sumPjtAccumulated - sumManualAmount;
+    rawGoalAllocatablePot = sumPjtAccumulated - sumManualAmount;
   } else {
-    goalAllocatablePot = surplus;
+    rawGoalAllocatablePot = surplus;
   }
+  final goalAllocatablePot = rawGoalAllocatablePot.clamp(0.0, double.infinity);
 
   // ①動かせるお金＝口座残高−PJT割振り分（全体）
   final movableFunds = effectiveBalance - goalAllocatablePot;
