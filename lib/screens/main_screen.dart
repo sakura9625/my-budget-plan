@@ -1,22 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/tab_provider.dart';
 import '../theme.dart';
 import 'home_tab.dart';
 import 'plan_tab.dart';
 import 'review_tab.dart';
 import 'settings_tab.dart';
 
-class MainScreen extends ConsumerStatefulWidget {
+class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
 
-  @override
-  ConsumerState<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends ConsumerState<MainScreen> {
-  int _currentIndex = 0;
-
-  final _tabs = const [
+  static const _tabs = [
     HomeTab(),
     PlanTab(),
     ReviewTab(),
@@ -24,15 +18,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(mainTabIndexProvider);
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: _tabs,
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        selectedIndex: currentIndex,
+        onDestinationSelected: (i) =>
+            ref.read(mainTabIndexProvider.notifier).state = i,
         backgroundColor: Colors.white,
         indicatorColor: AppTheme.primary.withOpacity(0.12),
         destinations: const [

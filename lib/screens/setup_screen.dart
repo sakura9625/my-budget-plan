@@ -423,6 +423,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.navy,
+                        side: const BorderSide(color: AppTheme.navy, width: 1.5),
+                      ),
                       onPressed: () => Navigator.pop(dialogContext, true),
                       child: const Text('このまま進む'),
                     ),

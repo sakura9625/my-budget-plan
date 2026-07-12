@@ -3,14 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/calculation_provider.dart';
 import '../providers/review_provider.dart';
+import '../providers/tab_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 import '../widgets/pig_background_body.dart';
+
+// レビュータブのインデックス（MainScreenの_tabs順に対応）。
+const int _reviewTabIndex = 2;
 
 // 計画進捗を3段階に集約したもの（良好=safe/onTrack/comfortable、悪い=danger/needsReview、達成困難=difficult）
 enum _ProgressTier { good, bad, difficult }
 
 const String _noAffordDataComment = 'まずは予算とプロジェクトを登録しような！';
+
+// 計画破綻時（①④月間自由枠マイナス、②movableFundsマイナス）のセリフ。
+// 原資判定×計画進捗の9パターンより優先して判定する（①→②の順）。
+enum _BreakdownStatus { excessivePlan, insufficientFunds }
+
+const Map<_BreakdownStatus, String> _breakdownCommentTable = {
+  _BreakdownStatus.excessivePlan:
+      'さすがに計画に無理がありすぎるぜ！目標か予算を、一回見直そうや',
+  _BreakdownStatus.insufficientFunds:
+      'おっと、手元が足りてないぜ！このままじゃ回らねぇ。確保を少し戻すか、計画をゆるめようや',
+};
 
 // キャラのセリフ一覧（原資判定 × 計画進捗）。ここが唯一の管理場所。
 // 表にない組み合わせ（余裕あり×悪い/達成困難、要自粛×悪い）は _pigComment() 側のフォールバックで解決する。
@@ -66,7 +81,7 @@ class HomeTab extends ConsumerWidget {
       body: PigBackgroundBody(
         pigAsset: 'pig_navy_chair.png',
         children: [
-          _buildHeadline(context, calc.headline),
+          _buildHeadline(context, ref, hasReview),
           const SizedBox(height: 20),
           _buildFreeAmountCard(context, calc),
           const SizedBox(height: 28),
@@ -105,21 +120,53 @@ class HomeTab extends ConsumerWidget {
     return sorted;
   }
 
-  Widget _buildHeadline(BuildContext context, String headline) {
+  // 最上部バナー。計画状態に応じたメッセージは廃止し（役割はメインカードのキャラ
+  // 吹き出しが担う）、「今月のレビュー完了フラグ」だけで2状態を出し分ける。
+  Widget _buildHeadline(BuildContext context, WidgetRef ref, bool hasReview) {
+    if (!hasReview) {
+      return GestureDetector(
+        onTap: () =>
+            ref.read(mainTabIndexProvider.notifier).state = _reviewTabIndex,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.danger,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '今月のレビューがまだ完了していません。',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primary,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(Icons.lightbulb_outline, color: AppTheme.navy, size: 20),
-          const SizedBox(width: 12),
+          Icon(Icons.lightbulb_outline, color: AppTheme.navy, size: 20),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
-              headline,
-              style: const TextStyle(
+              '貯めないブタはただのブタ',
+              style: TextStyle(
                 color: AppTheme.navy,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -134,7 +181,7 @@ class HomeTab extends ConsumerWidget {
   Widget _buildFreeAmountCard(BuildContext context, CalculationResult calc) {
     final hasGoals = calc.goalCalculations.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
         gradient: AppTheme.primaryGradient,
         borderRadius: BorderRadius.circular(20),
@@ -151,7 +198,7 @@ class HomeTab extends ConsumerWidget {
                 Text('今月 動かせるお金',
                     style: TextStyle(
                         color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   Formatter.man(calc.movableFunds),
                   style: const TextStyle(
@@ -162,19 +209,19 @@ class HomeTab extends ConsumerWidget {
                 ),
                 // 2. 原資判定バッジ
                 if (calc.affordabilityStatus != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   _affordabilityBadge(calc.affordabilityStatus!),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 // 3. 初期計画時の月間自由枠
                 _summaryChip(
                     '初期計画時の月間自由枠', Formatter.man(calc.monthlyFreeAmount)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 // 4. 予算枠
                 _summaryChip('予算枠', Formatter.man(calc.affordBudget)),
                 // 5. 計画進捗
                 if (hasGoals) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
@@ -195,7 +242,7 @@ class HomeTab extends ConsumerWidget {
                   ),
                 ],
                 // 6. 年間自由資金 / 予算を除くと（横並び1行）
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     _summaryChip('年間自由資金', Formatter.man(calc.annualFreeMoney)),
@@ -241,6 +288,8 @@ class HomeTab extends ConsumerWidget {
                   afford: calc.affordabilityStatus,
                   planStatus: calc.overallPlanStatus,
                   hasGoals: calc.goalCalculations.isNotEmpty,
+                  monthlyFreeAmount: calc.monthlyFreeAmount,
+                  movableFunds: calc.movableFunds,
                 ),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
@@ -259,11 +308,12 @@ class HomeTab extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
+        // pig_common.pngは横長素材（1408x768）のため、高さも固定するとレターボックス状の
+        // 余白ができてしまう。widthのみ指定し、高さは元画像の比率で自動計算させる。
         Image.asset(
           'assets/characters/pig_common.png',
-          height: 256,
-          width: 256,
+          width: 340,
           fit: BoxFit.contain,
         ),
       ],
@@ -288,11 +338,21 @@ class HomeTab extends ConsumerWidget {
 
   // キャラのひとこと。原資判定(AffordStatus)×計画進捗(_ProgressTier)の組み合わせから引く。
   // 予算・プロジェクトが1件もない場合のみ、判定不能として案内文を返す。
+  // ただし①④月間自由枠マイナス／②movableFundsマイナスの計画破綻は、
+  // 9パターン判定より先に判定する（①が根本問題のため①→②の順）。
   String _pigComment({
     required AffordStatus? afford,
     required PlanStatus? planStatus,
     required bool hasGoals,
+    required double monthlyFreeAmount,
+    required double movableFunds,
   }) {
+    if (monthlyFreeAmount < 0) {
+      return _breakdownCommentTable[_BreakdownStatus.excessivePlan]!;
+    }
+    if (movableFunds < 0) {
+      return _breakdownCommentTable[_BreakdownStatus.insufficientFunds]!;
+    }
     if (afford == null) return _noAffordDataComment;
 
     final tier = hasGoals ? _progressTierOf(planStatus) : _ProgressTier.good;
