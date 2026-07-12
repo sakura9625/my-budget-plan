@@ -364,12 +364,83 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           ],
           const SizedBox(height: 32),
           ElevatedButton(
-            onPressed: _nextStep,
+            onPressed: () {
+              if (isNegative) {
+                _showNegativeFreeAmountAlert();
+              } else {
+                _nextStep();
+              }
+            },
             child: const Text('次へ'),
           ),
         ],
       ),
     );
+  }
+
+  // ④月間自由枠がマイナスのまま「次へ」が押されたときの注意喚起ダイアログ。
+  // 強制はせず、「見直す」（前のステップに戻る）／「このまま進む」（マイナスのまま続行）を選ばせる。
+  Future<void> _showNegativeFreeAmountAlert() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('計画に無理があるかも',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: AppTheme.textDark)),
+              const SizedBox(height: 12),
+              const Text(
+                '毎月の自由枠がマイナスです。手取りに対して、貯蓄・プロジェクト・予算の合計が大きすぎるようです。目標額や予算を見直してみてください。',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              const PigWithSpeech(
+                asset: 'pig_bank_rich.png',
+                text: 'おいおい、さすがに欲張りすぎだぜ',
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('見直す'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('このまま進む'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (proceed == true) {
+      _nextStep();
+    } else {
+      _prevStep();
+    }
   }
 
   // Step6: レビュー日設定
