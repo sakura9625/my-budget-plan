@@ -311,9 +311,11 @@ class HomeTab extends ConsumerWidget {
         const SizedBox(height: 10),
         // pig_common.pngは横長素材（1408x768）のため、高さも固定するとレターボックス状の
         // 余白ができてしまう。widthのみ指定し、高さは元画像の比率で自動計算させる。
+        // Columnは上から順に並ぶだけなので、ここでwidthを増やしても顔の上端（吹き出し
+        // 直下の位置）は動かず、下方向にだけ拡大される。
         Image.asset(
           'assets/characters/pig_common.png',
-          width: 340,
+          width: 425,
           fit: BoxFit.contain,
         ),
       ],
