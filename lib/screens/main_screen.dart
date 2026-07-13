@@ -5,6 +5,7 @@ import '../theme.dart';
 import 'home_tab.dart';
 import 'plan_tab.dart';
 import 'review_tab.dart';
+import 'simulation_tab.dart';
 import 'settings_tab.dart';
 
 class MainScreen extends ConsumerWidget {
@@ -14,6 +15,7 @@ class MainScreen extends ConsumerWidget {
     HomeTab(),
     PlanTab(),
     ReviewTab(),
+    SimulationTab(),
     SettingsTab(),
   ];
 
@@ -46,6 +48,11 @@ class MainScreen extends ConsumerWidget {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month, color: AppTheme.primary),
             label: 'レビュー',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights, color: AppTheme.primary),
+            label: 'シミュレーション',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

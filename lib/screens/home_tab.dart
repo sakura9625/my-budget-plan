@@ -297,7 +297,7 @@ class HomeTab extends ConsumerWidget {
                               fontSize: 11)),
                       const SizedBox(width: 6),
                       Text(
-                        '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
+                        '${(calc.totalPlanProgress * 100).toStringAsFixed(1)}%',
                         style: const TextStyle(
                             color: AppTheme.navy,
                             fontSize: 16,
@@ -306,13 +306,13 @@ class HomeTab extends ConsumerWidget {
                     ],
                   ),
                 ],
-                // 6. 年間自由資金 / 予算を除くと（縦積み。左テキスト列の幅をフルに使う）
+                // 6. 年間自由資金 / 計画を含むと（縦積み。左テキスト列の幅をフルに使う）
                 const SizedBox(height: 10),
                         _summaryChip(
                             '年間自由資金', Formatter.man(calc.annualFreeMoney)),
                         const SizedBox(height: 8),
                         _summaryChip(
-                            '予算を除くと', Formatter.man(calc.annualFreeAmount)),
+                            '計画を含むと', Formatter.man(calc.annualFreeAmount)),
                       ],
                     ),
                   ),
@@ -627,7 +627,7 @@ class HomeTab extends ConsumerWidget {
                         style: TextStyle(
                             color: Color(0xFF6B7280), fontSize: 12)),
                     Text(
-                      '${(calc.totalOverallProgress * 100).toStringAsFixed(0)}%',
+                      '${(calc.totalOverallProgress * 100).toStringAsFixed(1)}%',
                       style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -644,7 +644,7 @@ class HomeTab extends ConsumerWidget {
                         style: TextStyle(
                             color: Color(0xFF6B7280), fontSize: 12)),
                     Text(
-                      '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
+                      '${(calc.totalPlanProgress * 100).toStringAsFixed(1)}%',
                       style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -749,7 +749,7 @@ class HomeTab extends ConsumerWidget {
                 style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
               ),
               Text(
-                '全体 ${(g.overallProgress * 100).toStringAsFixed(0)}% / 計画 ${(g.planProgress * 100).toStringAsFixed(0)}%',
+                '全体 ${(g.overallProgress * 100).toStringAsFixed(1)}% / 計画 ${(g.planProgress * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
               ),
             ],

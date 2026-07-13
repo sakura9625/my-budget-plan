@@ -137,8 +137,8 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
           ),
           const SizedBox(height: 16),
           _reviewRow('残高', Formatter.man(review.effectiveBalance)),
-          _reviewRow('全体進捗', '${(overallProgress * 100).toStringAsFixed(0)}%'),
-          _reviewRow('計画進捗', '${(planProgress * 100).toStringAsFixed(0)}%'),
+          _reviewRow('全体進捗', '${(overallProgress * 100).toStringAsFixed(1)}%'),
+          _reviewRow('計画進捗', '${(planProgress * 100).toStringAsFixed(1)}%'),
           if (review.comment != null) ...[
             const Divider(height: 20),
             Text(review.comment!,
@@ -224,7 +224,7 @@ class _ReviewTabState extends ConsumerState<ReviewTab> {
               ),
               const SizedBox(height: 4),
               Text(
-                '全体 ${(review.overallProgress * 100).toStringAsFixed(0)}%',
+                '全体 ${(review.overallProgress * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11),
               ),
             ],
@@ -618,11 +618,11 @@ class _ReviewInputSheetState extends ConsumerState<_ReviewInputSheet> {
           const Divider(height: 20),
           _confirmRow(
             '全体進捗',
-            '${(calc.totalOverallProgress * 100).toStringAsFixed(0)}%',
+            '${(calc.totalOverallProgress * 100).toStringAsFixed(1)}%',
           ),
           _confirmRow(
             '計画進捗',
-            '${(calc.totalPlanProgress * 100).toStringAsFixed(0)}%',
+            '${(calc.totalPlanProgress * 100).toStringAsFixed(1)}%',
             valueColor: AppTheme.planStatusColor(calc.overallPlanStatus),
           ),
           _confirmRow(

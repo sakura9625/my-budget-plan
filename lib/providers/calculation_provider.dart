@@ -101,10 +101,13 @@ double monthlyFromAnnual(double annualAmount) => annualAmount / 12;
 class CalculationResult {
   final double annualFreeMoney;
   final double monthlyFreeMoney;
+  // 「計画を含むと」＝年間手取り−年間固定費−PJT合計（予算は引かない）。
   final double annualFreeAmount;
   final double monthlyFreeAmount;
   final double allocatableAmount;
   final double movableFunds;
+  // 余剰金＝MAX(0, 口座残高−④（計算用・下限0）−②予算月額)。PJT割振り分の元になる値。
+  final double surplus;
   final List<GoalCalculation> goalCalculations;
   final List<BudgetCalculation> budgetCalculations;
   final double totalOverallProgress;
@@ -125,6 +128,7 @@ class CalculationResult {
     required this.monthlyFreeAmount,
     required this.allocatableAmount,
     required this.movableFunds,
+    required this.surplus,
     required this.goalCalculations,
     required this.budgetCalculations,
     required this.totalOverallProgress,
@@ -148,15 +152,23 @@ final calculationProvider = Provider<CalculationResult?>((ref) {
 
   if (settings == null) return null;
 
-  return _calculate(settings, goals, budgets, reviews);
+  return calculatePlan(
+    settings: settings,
+    goals: goals,
+    budgets: budgets,
+    reviews: reviews,
+  );
 });
 
-CalculationResult _calculate(
-  AppSettings settings,
-  List<Goal> goals,
-  List<Budget> budgets,
-  List<Review> reviews,
-) {
+// 計算ロジック本体の純粋関数。渡されたデータだけを使って計算し、Riverpodのwatchや
+// グローバル状態を内部で直接参照しない。本丸データ・（将来の）シミュレーションデータの
+// どちらを渡しても同じ関数で結果を出せるようにするための土台。
+CalculationResult calculatePlan({
+  required AppSettings settings,
+  required List<Goal> goals,
+  required List<Budget> budgets,
+  required List<Review> reviews,
+}) {
   final now = DateTime.now();
   final nowMonthTotal = now.year * 12 + now.month;
 
@@ -177,35 +189,48 @@ CalculationResult _calculate(
   final allocationGoals =
       annualPlanGoals.where((g) => g.status == GoalStatus.active).toList();
 
-  // PJT月額合計・予算月額合計＝「月額・期間ベース」。④月間自由枠と「予算を除くと」
-  // （年間自由枠）の両方がこの同じ値から導かれるため、年間値＝月間値×12が常に成立する。
-  // PJT月額＝目標額÷全期間（月数）、予算月額＝設定値そのまま。
-  // 対象は「終了していない（終了月が現在以降）」ものに限り、開始前（将来開始）も含める
-  // （開始した瞬間に自由枠が急減するのを防ぐため、将来分も今から織り込む）。
-  double totalGoalMonthly = 0;
+  // PJT合計・予算合計＝「月ごとの積み上げ方式」。各PJT/予算の月額を単純合計すると、
+  // 期間の重ならない（同時には走らない）PJT同士まで毎月分として合算されてしまい、
+  // 月間自由枠が過小になる。そこで現在月を1か月目とする今後12か月の各月について、
+  // その月が期間内のPJT/予算だけの当月額を積み上げ、12か月分を合計する。
+  // 複数年PJTは今後12か月と重なる月数分だけ、単年PJTは全期間が今後12か月に収まれば
+  // 目標額（or予算月額×12）そのものが算入される。
+  final windowStart = nowMonthTotal; // 今後12か月ウィンドウの1か月目（今月）
+  final windowEnd = nowMonthTotal + 11; // 今後12か月ウィンドウの12か月目
+
+  double totalGoalTwelveMonth = 0;
   for (final g in annualPlanGoals) {
+    final startTotal = g.startYear * 12 + g.startMonth;
     final endTotal = g.endYear * 12 + g.endMonth;
-    if (endTotal < nowMonthTotal) continue; // 終了済みは除外
     final totalM = _totalMonths(g.startYear, g.startMonth, g.endYear, g.endMonth);
     if (totalM <= 0) continue;
-    totalGoalMonthly += g.targetAmount / totalM;
+    final overlapStart = startTotal < windowStart ? windowStart : startTotal;
+    final overlapEnd = endTotal > windowEnd ? windowEnd : endTotal;
+    final overlapMonths = (overlapEnd - overlapStart + 1).clamp(0, 9999);
+    if (overlapMonths <= 0) continue; // 今後12か月と重ならない（既に終了/先すぎる）
+    totalGoalTwelveMonth += (g.targetAmount / totalM) * overlapMonths;
   }
 
-  double totalBudgetMonthly = 0;
+  double totalBudgetTwelveMonth = 0;
   for (final b in budgets) {
+    final startTotal = b.startYear * 12 + b.startMonth;
     final endTotal = b.endYear * 12 + b.endMonth;
-    if (endTotal < nowMonthTotal) continue; // 終了済みは除外
-    totalBudgetMonthly += b.monthlyAmount;
+    final overlapStart = startTotal < windowStart ? windowStart : startTotal;
+    final overlapEnd = endTotal > windowEnd ? windowEnd : endTotal;
+    final overlapMonths = (overlapEnd - overlapStart + 1).clamp(0, 9999);
+    if (overlapMonths <= 0) continue;
+    totalBudgetTwelveMonth += b.monthlyAmount * overlapMonths;
   }
 
-  // 年間自由枠（表示用。「予算を除くと」）＝④月間自由枠と同じ月額を年換算したもの。
-  // 従来の暦年切り出し方式（_targetMonthsInYear）は廃止。
-  final annualFreeAmount =
-      annualFreeMoney - (totalGoalMonthly * 12) - (totalBudgetMonthly * 12);
-
-  // ④月間自由枠（表示用）＝(年間手取り−年間固定費)÷12 − PJT月額合計 − 予算月額合計。
+  // ④月間自由枠（表示用）＝(年間手取り−年間固定費−PJT合計−予算合計)÷12。
   // ホーム表示・アラート判定・原資判定にはこちらを使う（計画の無理さを示すため、マイナスのまま保持）。
-  final monthlyFreeAmount = monthlyFreeMoney - totalGoalMonthly - totalBudgetMonthly;
+  final monthlyFreeAmount =
+      (annualFreeMoney - totalGoalTwelveMonth - totalBudgetTwelveMonth) / 12;
+
+  // 「計画を含むと」（旧：予算を除くと）＝年間手取り−年間固定費−PJT合計。
+  // 予算合計は引かない（PJT計画だけを織り込んだ年間額）。そのため
+  // 「計画を含むと＝④×12」は成立しない（予算合計ぶんだけ計画を含むとの方が大きい）。
+  final annualFreeAmount = annualFreeMoney - totalGoalTwelveMonth;
   // ④月間自由枠（計算用）＝表示用の下限0版。余剰金の計算にのみ使う。
   // 表示用がマイナスのまま余剰金の計算に使われると、残高から負を引く形になり
   // 余剰金が過大になってしまうため、ここでのみ0でクランプする。
@@ -427,7 +452,7 @@ CalculationResult _calculate(
 
   debugPrint(
     '[calculation_provider] annualFreeMoney=$annualFreeMoney '
-    'totalGoalMonthly=$totalGoalMonthly totalBudgetMonthly=$totalBudgetMonthly '
+    'totalGoalTwelveMonth=$totalGoalTwelveMonth totalBudgetTwelveMonth=$totalBudgetTwelveMonth '
     'annualFreeAmount=$annualFreeAmount monthlyFreeAmount=$monthlyFreeAmount '
     'effectiveBalance=$effectiveBalance surplus=$surplus '
     'sumPjtAccumulated(あるべき進捗額合計)=$sumPjtAccumulated sumManualAmount(確保済み合計)=$sumManualAmount '
@@ -453,6 +478,7 @@ CalculationResult _calculate(
     monthlyFreeAmount: monthlyFreeAmount,
     allocatableAmount: goalAllocatablePot,
     movableFunds: movableFunds,
+    surplus: surplus,
     goalCalculations: goalCalculations,
     budgetCalculations: budgetCalculations,
     totalOverallProgress: totalOverallProgress,

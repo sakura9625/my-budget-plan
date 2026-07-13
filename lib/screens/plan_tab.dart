@@ -355,7 +355,7 @@ class _GoalCard extends ConsumerWidget {
                   style:
                       const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
               Text(
-                '進捗 ${((calc?.overallProgress ?? 0) * 100).toStringAsFixed(0)}%',
+                '進捗 ${((calc?.overallProgress ?? 0) * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
               ),
             ],
