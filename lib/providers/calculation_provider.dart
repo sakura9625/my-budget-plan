@@ -177,27 +177,8 @@ CalculationResult _calculate(
   final allocationGoals =
       annualPlanGoals.where((g) => g.status == GoalStatus.active).toList();
 
-  double totalGoalAnnual = 0;
-  for (final g in annualPlanGoals) {
-    final totalM = _totalMonths(g.startYear, g.startMonth, g.endYear, g.endMonth);
-    if (totalM <= 0) continue;
-    final months = _targetMonthsInYear(g.startYear, g.startMonth, g.endYear, g.endMonth, now.year);
-    final monthly = g.targetAmount / totalM;
-    totalGoalAnnual += monthly * months;
-  }
-
-  double totalBudgetAnnual = 0;
-  for (final b in budgets) {
-    final months = _targetMonthsInYear(b.startYear, b.startMonth, b.endYear, b.endMonth, now.year);
-    totalBudgetAnnual += b.monthlyAmount * months;
-  }
-
-  // 年間自由枠は最低0（マイナスは警告表示用に保持）。「予算を除くと」表示にのみ使う。
-  final annualFreeAmount = annualFreeMoney - totalGoalAnnual - totalBudgetAnnual;
-
-  // ④月間自由枠（表示用）は「月額・期間ベース」で計算する：
-  // (年間手取り−年間固定費)÷12 − PJT月額合計 − 予算月額合計。
-  // 暦年でプロラタする方式（totalGoalAnnual/totalBudgetAnnual）とは別物。
+  // PJT月額合計・予算月額合計＝「月額・期間ベース」。④月間自由枠と「予算を除くと」
+  // （年間自由枠）の両方がこの同じ値から導かれるため、年間値＝月間値×12が常に成立する。
   // PJT月額＝目標額÷全期間（月数）、予算月額＝設定値そのまま。
   // 対象は「終了していない（終了月が現在以降）」ものに限り、開始前（将来開始）も含める
   // （開始した瞬間に自由枠が急減するのを防ぐため、将来分も今から織り込む）。
@@ -217,6 +198,12 @@ CalculationResult _calculate(
     totalBudgetMonthly += b.monthlyAmount;
   }
 
+  // 年間自由枠（表示用。「予算を除くと」）＝④月間自由枠と同じ月額を年換算したもの。
+  // 従来の暦年切り出し方式（_targetMonthsInYear）は廃止。
+  final annualFreeAmount =
+      annualFreeMoney - (totalGoalMonthly * 12) - (totalBudgetMonthly * 12);
+
+  // ④月間自由枠（表示用）＝(年間手取り−年間固定費)÷12 − PJT月額合計 − 予算月額合計。
   // ホーム表示・アラート判定・原資判定にはこちらを使う（計画の無理さを示すため、マイナスのまま保持）。
   final monthlyFreeAmount = monthlyFreeMoney - totalGoalMonthly - totalBudgetMonthly;
   // ④月間自由枠（計算用）＝表示用の下限0版。余剰金の計算にのみ使う。
@@ -440,7 +427,7 @@ CalculationResult _calculate(
 
   debugPrint(
     '[calculation_provider] annualFreeMoney=$annualFreeMoney '
-    'totalGoalAnnual=$totalGoalAnnual totalBudgetAnnual=$totalBudgetAnnual '
+    'totalGoalMonthly=$totalGoalMonthly totalBudgetMonthly=$totalBudgetMonthly '
     'annualFreeAmount=$annualFreeAmount monthlyFreeAmount=$monthlyFreeAmount '
     'effectiveBalance=$effectiveBalance surplus=$surplus '
     'sumPjtAccumulated(あるべき進捗額合計)=$sumPjtAccumulated sumManualAmount(確保済み合計)=$sumManualAmount '
@@ -540,14 +527,4 @@ String _buildHeadline(
 
 int _totalMonths(int startYear, int startMonth, int endYear, int endMonth) {
   return (endYear * 12 + endMonth) - (startYear * 12 + startMonth) + 1;
-}
-
-int _targetMonthsInYear(int startYear, int startMonth, int endYear, int endMonth, int targetYear) {
-  final yearStart = targetYear * 12 + 1;
-  final yearEnd = targetYear * 12 + 12;
-  final goalStart = startYear * 12 + startMonth;
-  final goalEnd = endYear * 12 + endMonth;
-  final overlapStart = goalStart < yearStart ? yearStart : goalStart;
-  final overlapEnd = goalEnd > yearEnd ? yearEnd : goalEnd;
-  return (overlapEnd - overlapStart + 1).clamp(0, 12);
 }

@@ -302,27 +302,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final fixed = double.tryParse(_fixedCostController.text) ?? 0;
     final annualFree = income - fixed;
 
-    double totalGoal = 0;
-    for (final g in [..._savings, ..._projects]) {
-      final months = (g['endYear'] * 12 + g['endMonth']) -
-          (g['startYear'] * 12 + g['startMonth']) +
-          1;
-      totalGoal += (g['amount'] as double) /
-          months *
-          _targetMonthsInCurrentYear(
-              g['startYear'], g['startMonth'], g['endYear'], g['endMonth']);
-    }
-
-    double totalBudget = 0;
-    for (final b in _budgets) {
-      totalBudget += (b['amount'] as double) *
-          _targetMonthsInCurrentYear(
-              b['startYear'], b['startMonth'], b['endYear'], b['endMonth']);
-    }
-
-    final annualFreeAmount = annualFree - totalGoal - totalBudget;
-
-    // ④月間自由枠は「月額・期間ベース」で計算する（年間自由枠の暦年プロラタとは別物）。
+    // PJT月額合計・予算月額合計＝「月額・期間ベース」。年間自由枠・④月間自由枠の両方が
+    // この同じ値から導かれるため、年間値＝月間値×12が常に成立する（ホーム画面と同じ方式）。
     // 終了していない（終了月が現在以降）ものだけを対象にし、開始前も含める。
     final now = DateTime.now();
     final nowMonthTotal = now.year * 12 + now.month;
@@ -342,6 +323,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       if (endTotal < nowMonthTotal) continue;
       totalBudgetMonthly += b['amount'] as double;
     }
+
+    final annualFreeAmount =
+        annualFree - (totalGoalMonthly * 12) - (totalBudgetMonthly * 12);
     final monthlyFreeAmount =
         (annualFree / 12) - totalGoalMonthly - totalBudgetMonthly;
     final isNegative = monthlyFreeAmount < 0;
@@ -363,9 +347,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               Formatter.man(
                   double.tryParse(_totalBalanceController.text) ?? 0)),
           Divider(height: 24, color: Colors.white.withOpacity(0.2)),
-          _buildSummaryRow('今年の貯蓄目標', Formatter.man(totalGoal)),
-          _buildSummaryRow('今年のプロジェクト', ''),
-          _buildSummaryRow('今年の予算合計', Formatter.man(totalBudget)),
+          _buildSummaryRow(
+              '貯蓄・プロジェクト合計', Formatter.man(totalGoalMonthly * 12)),
+          _buildSummaryRow('予算合計', Formatter.man(totalBudgetMonthly * 12)),
           Divider(height: 24, color: Colors.white.withOpacity(0.2)),
           _buildSummaryRow(
             '年間自由枠',
@@ -1118,17 +1102,5 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     }
 
     _nextStep();
-  }
-
-  int _targetMonthsInCurrentYear(
-      int startYear, int startMonth, int endYear, int endMonth) {
-    final now = DateTime.now();
-    final yearStart = now.year * 12 + 1;
-    final yearEnd = now.year * 12 + 12;
-    final goalStart = startYear * 12 + startMonth;
-    final goalEnd = endYear * 12 + endMonth;
-    final overlapStart = goalStart < yearStart ? yearStart : goalStart;
-    final overlapEnd = goalEnd > yearEnd ? yearEnd : goalEnd;
-    return (overlapEnd - overlapStart + 1).clamp(0, 12);
   }
 }
