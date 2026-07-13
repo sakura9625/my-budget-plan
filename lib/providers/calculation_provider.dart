@@ -52,6 +52,9 @@ class GoalCalculation {
   // (目標−PJT割振り分−確保済み)÷残月数。全体進捗の分子（割振り分+確保済み）と揃えてある。
   final double displayRequiredMonthlyAmount;
   final int remainingMonths;
+  // 開始月がまだ来ていないPJTかどうか。falseの間はplanStatusが「達成困難」（進捗0起因）
+  // になり得るため、表示側はhasStarted==falseのときplanStatusを使わず「開始前」を出すこと。
+  final bool hasStarted;
 
   GoalCalculation({
     required this.goal,
@@ -64,6 +67,7 @@ class GoalCalculation {
     required this.requiredMonthlyAmount,
     required this.displayRequiredMonthlyAmount,
     required this.remainingMonths,
+    required this.hasStarted,
   });
 }
 
@@ -188,11 +192,33 @@ CalculationResult _calculate(
     totalBudgetAnnual += b.monthlyAmount * months;
   }
 
-  // 年間自由枠は最低0（マイナスは警告表示用に保持）
+  // 年間自由枠は最低0（マイナスは警告表示用に保持）。「予算を除くと」表示にのみ使う。
   final annualFreeAmount = annualFreeMoney - totalGoalAnnual - totalBudgetAnnual;
-  // ④月間自由枠（表示用）は年間自由枠を12で割る。マイナスのまま保持し、
-  // ホーム表示・アラート判定・原資判定にはこちらを使う（計画の無理さを示すため）。
-  final monthlyFreeAmount = monthlyFromAnnual(annualFreeAmount);
+
+  // ④月間自由枠（表示用）は「月額・期間ベース」で計算する：
+  // (年間手取り−年間固定費)÷12 − PJT月額合計 − 予算月額合計。
+  // 暦年でプロラタする方式（totalGoalAnnual/totalBudgetAnnual）とは別物。
+  // PJT月額＝目標額÷全期間（月数）、予算月額＝設定値そのまま。
+  // 対象は「終了していない（終了月が現在以降）」ものに限り、開始前（将来開始）も含める
+  // （開始した瞬間に自由枠が急減するのを防ぐため、将来分も今から織り込む）。
+  double totalGoalMonthly = 0;
+  for (final g in annualPlanGoals) {
+    final endTotal = g.endYear * 12 + g.endMonth;
+    if (endTotal < nowMonthTotal) continue; // 終了済みは除外
+    final totalM = _totalMonths(g.startYear, g.startMonth, g.endYear, g.endMonth);
+    if (totalM <= 0) continue;
+    totalGoalMonthly += g.targetAmount / totalM;
+  }
+
+  double totalBudgetMonthly = 0;
+  for (final b in budgets) {
+    final endTotal = b.endYear * 12 + b.endMonth;
+    if (endTotal < nowMonthTotal) continue; // 終了済みは除外
+    totalBudgetMonthly += b.monthlyAmount;
+  }
+
+  // ホーム表示・アラート判定・原資判定にはこちらを使う（計画の無理さを示すため、マイナスのまま保持）。
+  final monthlyFreeAmount = monthlyFreeMoney - totalGoalMonthly - totalBudgetMonthly;
   // ④月間自由枠（計算用）＝表示用の下限0版。余剰金の計算にのみ使う。
   // 表示用がマイナスのまま余剰金の計算に使われると、残高から負を引く形になり
   // 余剰金が過大になってしまうため、ここでのみ0でクランプする。
@@ -207,8 +233,14 @@ CalculationResult _calculate(
     final usageRate = budget.usageRate;
     final status = _toBudgetStatus(usageRate);
     final remainingAmount = budget.plannedAmount - budget.usedAmount;
+    final budgetStartMonthTotal = budget.startYear * 12 + budget.startMonth;
     final budgetEndMonthTotal = budget.endYear * 12 + budget.endMonth;
-    final remainingMonths = (budgetEndMonthTotal - nowMonthTotal + 1).clamp(1, 9999);
+    // 残月数の起点は「開始月と現在月の遅いほう」にする（未来開始の予算を、開始前の
+    // 期間まで含めて長い月数で割ってしまい、月額が過小になるのを防ぐ）。
+    final calculationStart = nowMonthTotal < budgetStartMonthTotal
+        ? budgetStartMonthTotal
+        : nowMonthTotal;
+    final remainingMonths = (budgetEndMonthTotal - calculationStart + 1).clamp(1, 9999);
     final rawCurrentMonthlyAmount = remainingAmount / remainingMonths;
     final currentMonthlyAmount = rawCurrentMonthlyAmount.clamp(0.0, double.infinity);
     return BudgetCalculation(
@@ -253,6 +285,9 @@ CalculationResult _calculate(
     final pjtAccumulated =
         totalMonths > 0 ? goal.targetAmount / totalMonths * elapsedMonths : 0.0;
     final plannedProgress = totalMonths > 0 ? elapsedMonths / totalMonths : 0.0;
+    // 開始月がまだ来ていないか（開始前は進捗0→「達成困難」誤判定になるため、
+    // 個別バッジ・全体計画進捗・見出し判定のいずれからも除外する）。
+    final hasStarted = nowMonthTotal >= startTotal;
     return (
       goal: goal,
       totalMonths: totalMonths,
@@ -260,6 +295,7 @@ CalculationResult _calculate(
       requiredMonthlyAmount: requiredMonthlyAmount,
       pjtAccumulated: pjtAccumulated,
       plannedProgress: plannedProgress,
+      hasStarted: hasStarted,
     );
   }).toList();
 
@@ -338,6 +374,7 @@ CalculationResult _calculate(
       requiredMonthlyAmount: gi.requiredMonthlyAmount,
       displayRequiredMonthlyAmount: displayRequiredMonthlyAmount,
       remainingMonths: gi.remainingMonths,
+      hasStarted: gi.hasStarted,
     );
   }).toList();
 
@@ -350,9 +387,14 @@ CalculationResult _calculate(
 
   // 全体計画進捗＝金額加重（実際進捗額合計÷あるべき進捗額合計）。単純平均だと
   // 金額の大きいPJTの遅れが金額の小さいPJTの進みに埋もれてしまうため、金額で重み付けする。
-  // totalDisplay・sumPjtAccumulatedはいずれもallocationGoals（進行中のみ）由来。
+  // 開始前のPJT（あるべき進捗額0）は集計対象から外す：分母には元々0しか足さないが、
+  // 分子（displayAmount）に配分済み額が乗ると分母0に対して分子だけ膨らみ、
+  // 進捗が過大に出てしまうため。
+  final startedDisplay = goalCalculations
+      .where((gc) => gc.hasStarted)
+      .fold(0.0, (sum, gc) => sum + gc.displayAmount);
   final totalPlanProgress = sumPjtAccumulated > 0
-      ? (totalDisplay / sumPjtAccumulated).clamp(0.0, 2.0)
+      ? (startedDisplay / sumPjtAccumulated).clamp(0.0, 2.0)
       : 0.0;
 
   final hasNoGoals = allocationGoals.isEmpty;
@@ -380,13 +422,17 @@ CalculationResult _calculate(
   );
 
   // 今日のひと言
-  final hasCurrentMonthReview = reviews.isNotEmpty &&
-      reviews.first.year == now.year &&
-      reviews.first.month == now.month;
+  // reviews.firstは並び順（ソート）に依存するため、年月が今月と一致するかで
+  // 直接判定する（並び順が崩れていても誤判定しない）。
+  final hasCurrentMonthReview = reviews.any(
+    (review) => review.year == now.year && review.month == now.month,
+  );
 
   final headline = _buildHeadline(
     hasCurrentMonthReview,
-    goalCalculations,
+    // 危険・達成困難などの見出し判定は開始前のPJT（進捗0起因の見かけ上の「達成困難」）
+    // を対象から外す。
+    goalCalculations.where((gc) => gc.hasStarted).toList(),
     budgetCalculations,
     overallPlanStatus,
     hasNoGoals,
@@ -450,6 +496,10 @@ PlanStatus _toPlanStatus(double planProgress) {
 AffordStatus? _toAffordabilityStatus(double movableFunds, double affordBudget,
     double affordProject, double monthlyFreeAmount) {
   if (affordBudget <= 0 && affordProject <= 0) return null; // 予算・プロジェクトが0件
+  // ④（表示用・マイナス許容）がマイナスだと、movableFunds-total >= monthlyFreeAmountが
+  // マイナス同士の比較で成立しやすくなり「余裕あり」に誤判定されるため、先に締める。
+  // 月間自由枠マイナス時の破綻セリフ（別のフォールバック）とは両立させてよい。
+  if (monthlyFreeAmount < 0) return AffordStatus.critical;
   // 境界値は「余裕がある側（上の区分）」に入れるため、各区分の下限側は>=、上限側は<で統一する。
   final total = affordBudget + affordProject;
   final comfortable = movableFunds - total >= monthlyFreeAmount;

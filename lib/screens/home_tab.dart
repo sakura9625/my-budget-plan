@@ -680,8 +680,15 @@ class HomeTab extends ConsumerWidget {
   }
 
   Widget _buildGoalCard(BuildContext context, GoalCalculation g) {
-    final color = AppTheme.planStatusColor(g.planStatus);
-    final label = AppTheme.planStatusLabel(g.planStatus);
+    // 開始前のPJTはplanStatusが進捗0起因の「達成困難」になり得るため、
+    // 専用の「開始前」表示にする（達成困難として誤表示しない）。
+    final color =
+        g.hasStarted ? AppTheme.planStatusColor(g.planStatus) : Colors.grey;
+    final bgColor = g.hasStarted
+        ? AppTheme.planStatusBgColor(g.planStatus)
+        : const Color(0xFFF5F5F5);
+    final label =
+        g.hasStarted ? AppTheme.planStatusLabel(g.planStatus) : '開始前';
     final progress = g.overallProgress.clamp(0.0, 1.0);
 
     return Container(
@@ -720,7 +727,7 @@ class HomeTab extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.planStatusBgColor(g.planStatus),
+                  color: bgColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(label,

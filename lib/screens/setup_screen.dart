@@ -321,8 +321,30 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     }
 
     final annualFreeAmount = annualFree - totalGoal - totalBudget;
-    final monthlyFreeAmount = monthlyFromAnnual(annualFreeAmount);
-    final isNegative = annualFreeAmount < 0;
+
+    // ④月間自由枠は「月額・期間ベース」で計算する（年間自由枠の暦年プロラタとは別物）。
+    // 終了していない（終了月が現在以降）ものだけを対象にし、開始前も含める。
+    final now = DateTime.now();
+    final nowMonthTotal = now.year * 12 + now.month;
+    double totalGoalMonthly = 0;
+    for (final g in [..._savings, ..._projects]) {
+      final endTotal = (g['endYear'] as int) * 12 + (g['endMonth'] as int);
+      if (endTotal < nowMonthTotal) continue;
+      final months = endTotal -
+          ((g['startYear'] as int) * 12 + (g['startMonth'] as int)) +
+          1;
+      if (months <= 0) continue;
+      totalGoalMonthly += (g['amount'] as double) / months;
+    }
+    double totalBudgetMonthly = 0;
+    for (final b in _budgets) {
+      final endTotal = (b['endYear'] as int) * 12 + (b['endMonth'] as int);
+      if (endTotal < nowMonthTotal) continue;
+      totalBudgetMonthly += b['amount'] as double;
+    }
+    final monthlyFreeAmount =
+        (annualFree / 12) - totalGoalMonthly - totalBudgetMonthly;
+    final isNegative = monthlyFreeAmount < 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

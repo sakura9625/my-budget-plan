@@ -273,13 +273,20 @@ class _GoalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final color =
-        calc != null ? AppTheme.planStatusColor(calc!.planStatus) : Colors.grey;
-    final bgColor = calc != null
-        ? AppTheme.planStatusBgColor(calc!.planStatus)
-        : const Color(0xFFF5F5F5);
-    final label =
-        calc != null ? AppTheme.planStatusLabel(calc!.planStatus) : '-';
+    // 開始前のPJTはplanStatusが進捗0起因の「達成困難」になり得るため、
+    // 専用の「開始前」表示にする（達成困難として誤表示しない）。
+    final notStarted = calc != null && !calc!.hasStarted;
+    final color = calc == null || notStarted
+        ? Colors.grey
+        : AppTheme.planStatusColor(calc!.planStatus);
+    final bgColor = calc == null || notStarted
+        ? const Color(0xFFF5F5F5)
+        : AppTheme.planStatusBgColor(calc!.planStatus);
+    final label = calc == null
+        ? '-'
+        : notStarted
+            ? '開始前'
+            : AppTheme.planStatusLabel(calc!.planStatus);
     final progress = (calc?.overallProgress ?? 0).clamp(0.0, 1.0);
     final entries = ref.watch(manualEntryProvider.notifier).forGoal(goal.id);
 
