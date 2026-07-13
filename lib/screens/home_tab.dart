@@ -299,21 +299,13 @@ class HomeTab extends ConsumerWidget {
                     ],
                   ),
                 ],
-                // 6. 年間自由資金 / 予算を除くと（横並び1行）
+                // 6. 年間自由資金 / 予算を除くと（縦積み。左テキスト列の幅をフルに使う）
                 const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _summaryChip('年間自由資金',
-                                  Formatter.man(calc.annualFreeMoney)),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _summaryChip('予算を除くと',
-                                  Formatter.man(calc.annualFreeAmount)),
-                            ),
-                          ],
-                        ),
+                        _summaryChip(
+                            '年間自由資金', Formatter.man(calc.annualFreeMoney)),
+                        const SizedBox(height: 8),
+                        _summaryChip(
+                            '予算を除くと', Formatter.man(calc.annualFreeAmount)),
                       ],
                     ),
                   ),
