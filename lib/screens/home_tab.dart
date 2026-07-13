@@ -188,12 +188,15 @@ class HomeTab extends ConsumerWidget {
     // 常にレイアウトと矛盾しないサイズにする。
     return LayoutBuilder(
       builder: (context, constraints) {
-        final pigWidth = constraints.maxWidth * 0.55;
+        // 顔を大きくしすぎると右側の吹き出し用スペース（bubbleWidth）が左のテキスト列を
+        // 圧迫し、金額などが不自然な位置で折り返されるため、テキスト優先で控えめにする。
+        final pigWidth = constraints.maxWidth * 0.44;
         // pig_common.pngはトリミング済みの正方形素材（769x768）。widthのみ指定し
         // 高さは元画像の比率で自動計算する。
         final pigHeight = pigWidth / (769 / 768);
-        // 吹き出しは顔より少し広めにして、テキストが窮屈にならないようにする。
-        final bubbleWidth = constraints.maxWidth * 0.64;
+        // 吹き出しは顔より少し広めにしつつ、Row内で確保される幅でもあるため
+        // テキスト列を圧迫しない範囲に抑える。
+        final bubbleWidth = constraints.maxWidth * 0.55;
         // 吹き出し＋顔がテキスト列と重ならないよう、テキスト列側にもその分の高さを確保する
         // （吹き出しの文字数で高さが変わるため、長めのセリフでも2〜3行で収まる想定の概算値）。
         const bubbleHeightEstimate = 100.0;
@@ -250,12 +253,16 @@ class HomeTab extends ConsumerWidget {
                     style: TextStyle(
                         color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(
-                  Formatter.man(calc.movableFunds),
-                  style: const TextStyle(
-                    color: AppTheme.navy,
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    Formatter.man(calc.movableFunds),
+                    style: const TextStyle(
+                      color: AppTheme.navy,
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 // 2. 原資判定バッジ
