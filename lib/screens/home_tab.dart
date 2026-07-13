@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/calculation_provider.dart';
 import '../providers/review_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/tab_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
@@ -66,6 +67,10 @@ class HomeTab extends ConsumerWidget {
     final calc = ref.watch(calculationProvider);
     final reviews = ref.watch(reviewProvider);
     final hasReview = ref.read(reviewProvider.notifier).hasCurrentMonthReview;
+    final settings = ref.watch(settingsProvider);
+    // 赤アラートは「レビュー日を過ぎている（当日含む）」かつ「今月未実施」の両方を満たすときだけ。
+    final reviewDay = settings?.reviewDay ?? 28;
+    final showReviewAlert = !hasReview && DateTime.now().day >= reviewDay;
 
     if (calc == null) {
       return const Scaffold(
@@ -81,7 +86,7 @@ class HomeTab extends ConsumerWidget {
       body: PigBackgroundBody(
         pigAsset: 'pig_navy_chair.png',
         children: [
-          _buildHeadline(context, ref, hasReview),
+          _buildHeadline(context, ref, showReviewAlert),
           const SizedBox(height: 20),
           _buildFreeAmountCard(context, calc),
           const SizedBox(height: 28),
@@ -121,9 +126,11 @@ class HomeTab extends ConsumerWidget {
   }
 
   // 最上部バナー。計画状態に応じたメッセージは廃止し（役割はメインカードのキャラ
-  // 吹き出しが担う）、「今月のレビュー完了フラグ」だけで2状態を出し分ける。
-  Widget _buildHeadline(BuildContext context, WidgetRef ref, bool hasReview) {
-    if (!hasReview) {
+  // 吹き出しが担う）、「レビュー日を過ぎている（当日含む）かつ今月未実施」かどうかで
+  // 2状態を出し分ける（レビュー日前は未実施でも赤にしない）。
+  Widget _buildHeadline(
+      BuildContext context, WidgetRef ref, bool showReviewAlert) {
+    if (showReviewAlert) {
       return GestureDetector(
         onTap: () =>
             ref.read(mainTabIndexProvider.notifier).state = _reviewTabIndex,
