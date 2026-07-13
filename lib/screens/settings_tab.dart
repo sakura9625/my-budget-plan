@@ -244,13 +244,18 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('データをリセット'),
+        backgroundColor: Colors.white,
+        title: const Text('データをリセット',
+            style: TextStyle(
+                color: AppTheme.textDark, fontWeight: FontWeight.bold)),
         content: const Text(
           'すべてのデータ（設定・プロジェクト・予算・レビュー・残高）が消え、\n初回起動の状態に戻ります。よろしいですか？',
+          style: TextStyle(color: AppTheme.danger),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.navy),
             child: const Text('キャンセル'),
           ),
           TextButton(
@@ -258,8 +263,11 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               Navigator.pop(dialogContext);
               await _resetAllData();
             },
-            child:
-                const Text('リセットする', style: TextStyle(color: AppTheme.danger)),
+            style: TextButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('リセットする'),
           ),
         ],
       ),

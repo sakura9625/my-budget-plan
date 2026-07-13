@@ -194,9 +194,9 @@ class HomeTab extends ConsumerWidget {
         // pig_common.pngはトリミング済みの正方形素材（769x768）。widthのみ指定し
         // 高さは元画像の比率で自動計算する。
         final pigHeight = pigWidth / (769 / 768);
-        // 吹き出しは顔より少し広めにしつつ、Row内で確保される幅でもあるため
-        // テキスト列を圧迫しない範囲に抑える。
-        final bubbleWidth = constraints.maxWidth * 0.55;
+        // 吹き出し＋顔の右側ブロックがRow内で確保する幅。これがそのまま左テキスト列の
+        // 残り幅を決めるため、中央（0.5）を超えないよう、ちょうど半分に制限する。
+        final bubbleWidth = constraints.maxWidth * 0.5;
         // 吹き出し＋顔がテキスト列と重ならないよう、テキスト列側にもその分の高さを確保する
         // （吹き出しの文字数で高さが変わるため、長めのセリフでも2〜3行で収まる想定の概算値）。
         const bubbleHeightEstimate = 100.0;
@@ -275,8 +275,8 @@ class HomeTab extends ConsumerWidget {
                 _summaryChip(
                     '初期計画時の月間自由枠', Formatter.man(calc.monthlyFreeAmount)),
                 const SizedBox(height: 8),
-                // 4. 予算枠
-                _summaryChip('予算枠', Formatter.man(calc.affordBudget)),
+                // 4. 予算枠（表示はマイナス許容。計算に使うcalc.affordBudgetは0クランプのまま）
+                _summaryChip('予算枠', _formatSignedMan(calc.displayAffordBudget)),
                 // 5. 計画進捗
                 if (hasGoals) ...[
                   const SizedBox(height: 10),
@@ -459,6 +459,12 @@ class HomeTab extends ConsumerWidget {
     }
   }
 
+  // マイナスのときは「▲◯万円」で表示する（表示専用。計算には使わない）。
+  String _formatSignedMan(double value) {
+    if (value < 0) return '▲${Formatter.man(value.abs())}';
+    return Formatter.man(value);
+  }
+
   Widget _summaryChip(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,6 +481,9 @@ class HomeTab extends ConsumerWidget {
   Widget _buildBudgetCard(BuildContext context, BudgetCalculation b) {
     final color = AppTheme.budgetStatusColor(b.status);
     final label = AppTheme.budgetStatusLabel(b.status);
+    // 今月の目安がマイナス（予算超過）のときだけ、表示専用の▲表記に切り替える。
+    // 計算に使うb.currentMonthlyAmountは0クランプのまま変更しない。
+    final isOverBudget = b.displayCurrentMonthlyAmount < 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -497,9 +506,23 @@ class HomeTab extends ConsumerWidget {
                     Text(b.budget.name,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                    Text('月額 ${Formatter.man(b.currentMonthlyAmount)}',
+                    if (isOverBudget) ...[
+                      Text(
+                        '今月の目安：▲${Formatter.man(b.displayCurrentMonthlyAmount.abs())}',
                         style: const TextStyle(
-                            color: Color(0xFF6B7280), fontSize: 12)),
+                            color: Color(0xFF6B7280), fontSize: 12),
+                      ),
+                      Text(
+                        '${Formatter.man(b.remainingAmount.abs())}オーバーしています',
+                        style: const TextStyle(
+                            color: AppTheme.danger,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ] else
+                      Text('月額 ${Formatter.man(b.currentMonthlyAmount)}',
+                          style: const TextStyle(
+                              color: Color(0xFF6B7280), fontSize: 12)),
                   ],
                 ),
               ),

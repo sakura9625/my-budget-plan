@@ -23,6 +23,13 @@ class ReviewNotifier extends StateNotifier<List<Review>> {
   }
 
   Future<void> save(Review review) async {
+    // 同じ年月の既存レビューを削除してから保存する（月1個・上書き）。
+    final dup = _box.values
+        .where((r) => r.year == review.year && r.month == review.month)
+        .toList();
+    for (final r in dup) {
+      await _box.delete(r.id);
+    }
     await _box.put(review.id, review);
     _load();
   }

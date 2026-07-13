@@ -705,13 +705,41 @@ class _StatusDropdown extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<GoalStatus>(
       onSelected: (status) async {
+        // 達成済みは「確保済み（manualAmount）」が目標額に達しているときだけ選べる。
+        // 残高や配分は見ない：別口座に確保していなければ達成にできない仕様。
+        if (status == GoalStatus.completed &&
+            goal.manualAmount < goal.targetAmount) {
+          const alertRed = Color(0xFFD32F2F);
+          await showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: alertRed, width: 2),
+              ),
+              content: const Text(
+                'プロジェクト用の予算を別口座に移すなどして「確保済み」にしてください。',
+                style: TextStyle(color: alertRed),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('OK', style: TextStyle(color: alertRed)),
+                ),
+              ],
+            ),
+          );
+          goal.status = GoalStatus.active;
+          await ref.read(goalProvider.notifier).update(goal);
+          return;
+        }
         goal.status = status;
         await ref.read(goalProvider.notifier).update(goal);
       },
       itemBuilder: (_) => const [
         PopupMenuItem(value: GoalStatus.active, child: Text('🚧 進行中')),
         PopupMenuItem(value: GoalStatus.completed, child: Text('✅ 達成')),
-        PopupMenuItem(value: GoalStatus.frozen, child: Text('❄️ 凍結')),
         PopupMenuItem(value: GoalStatus.abandoned, child: Text('💀 断念')),
       ],
       child: Container(
@@ -739,8 +767,8 @@ class _StatusDropdown extends ConsumerWidget {
         return '🚧 進行中';
       case GoalStatus.completed:
         return '✅ 達成';
+      // 凍結は選択肢から廃止し断念に一本化。既存データに残っていても断念として表示する。
       case GoalStatus.frozen:
-        return '❄️ 凍結';
       case GoalStatus.abandoned:
         return '💀 断念';
     }
