@@ -21,6 +21,7 @@ class SimulationPaywallScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final productAsync = ref.watch(simulationProductProvider);
+    final product = productAsync.valueOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const Text('未来シミュレーション')),
@@ -75,10 +76,15 @@ class SimulationPaywallScreen extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _startPurchase(context, ref, productAsync),
+                // 商品情報が取得できていない間はボタンを無効化する
+                // （エラー文言は出さず、タップ自体をさせない）。
+                onPressed:
+                    product == null ? null : () => _startPurchase(context, ref, product),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: AppTheme.navy,
+                  disabledBackgroundColor: AppTheme.primary.withOpacity(0.4),
+                  disabledForegroundColor: AppTheme.navy.withOpacity(0.4),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('未来シミュを有効にする',
@@ -118,12 +124,13 @@ class SimulationPaywallScreen extends ConsumerWidget {
   }
 
   // 価格はApp Storeから取得したローカライズ済み文字列のみを表示する（ハードコードしない）。
+  // 取得失敗時はエラー文言をユーザーに見せず、控えめに空欄のまま表示する
+  // （原因調査用のログはpurchase_service.dart側に出している）。
   Widget _priceDisplay(AsyncValue<ProductDetails?> productAsync) {
     return productAsync.when(
       data: (product) {
         if (product == null) {
-          return const Text('価格情報を取得できませんでした',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 13));
+          return const SizedBox(height: 22);
         }
         return Text('${product.price} ／ 年',
             style: const TextStyle(
@@ -134,8 +141,7 @@ class SimulationPaywallScreen extends ConsumerWidget {
         width: 24,
         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
       ),
-      error: (error, stackTrace) => const Text('価格情報を取得できませんでした',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+      error: (error, stackTrace) => const SizedBox(height: 22),
     );
   }
 
@@ -155,15 +161,8 @@ class SimulationPaywallScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _startPurchase(BuildContext context, WidgetRef ref,
-      AsyncValue<ProductDetails?> productAsync) async {
-    final product = productAsync.valueOrNull;
-    if (product == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('価格情報を取得できませんでした。時間をおいて再度お試しください。')),
-      );
-      return;
-    }
+  Future<void> _startPurchase(
+      BuildContext context, WidgetRef ref, ProductDetails product) async {
     await ref.read(purchaseServiceProvider).buy(product);
   }
 

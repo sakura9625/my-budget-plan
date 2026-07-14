@@ -8,8 +8,7 @@ import '../providers/premium_provider.dart';
 
 // 未来シミュレーションの年額課金の商品ID（App Store Connect / Google Play Consoleに
 // 登録するIDと一致させること）。
-const String kSimulationYearlyProductId =
-    'com.sakura9625.mybudgetplan.simulation.yearly';
+const String kSimulationYearlyProductId = 'mybudgetplan_simulation_yearly';
 
 final purchaseServiceProvider = Provider<PurchaseService>((ref) {
   final service = PurchaseService(ref);
@@ -62,8 +61,12 @@ class PurchaseService {
           defaultTargetPlatform == TargetPlatform.iOS);
 
   // 商品情報（ローカライズ済み価格文字列を含む）を取得する。
+  // 失敗原因の調査用に、結果（取得できた商品ID・notFoundIDs・エラー内容）を
+  // デバッグログへ出力する。UI側にはエラー文言を出さない。
   Future<ProductDetailsResponse> queryProductDetails() async {
     if (!_isSupportedPlatform) {
+      debugPrint('[PurchaseService] queryProductDetails: unsupported platform '
+          '(kIsWeb=$kIsWeb, defaultTargetPlatform=$defaultTargetPlatform)');
       return ProductDetailsResponse(
         productDetails: const [],
         notFoundIDs: [kSimulationYearlyProductId],
@@ -71,12 +74,18 @@ class PurchaseService {
     }
     final available = await _iap.isAvailable();
     if (!available) {
+      debugPrint('[PurchaseService] queryProductDetails: store not available');
       return ProductDetailsResponse(
         productDetails: const [],
         notFoundIDs: [kSimulationYearlyProductId],
       );
     }
-    return _iap.queryProductDetails({kSimulationYearlyProductId});
+    final response = await _iap.queryProductDetails({kSimulationYearlyProductId});
+    debugPrint('[PurchaseService] queryProductDetails result: '
+        'found=${response.productDetails.map((p) => p.id).toList()}, '
+        'notFoundIDs=${response.notFoundIDs}, '
+        'error=${response.error}');
+    return response;
   }
 
   // 購入を開始する。結果はpurchaseStream経由で_handlePurchaseUpdatesに届く。
