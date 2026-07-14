@@ -55,13 +55,7 @@ class SimulationPaywallScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
-            Center(child: _priceDisplay(productAsync)),
-            const SizedBox(height: 14),
-            const Text(
-              '購入後は自動更新されます。解約はApp Storeの設定からいつでも可能です。',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12, height: 1.6),
-            ),
+            _autoRenewalNotice(product),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -123,26 +117,16 @@ class SimulationPaywallScreen extends ConsumerWidget {
     );
   }
 
-  // 価格はApp Storeから取得したローカライズ済み文字列のみを表示する（ハードコードしない）。
-  // 取得失敗時はエラー文言をユーザーに見せず、控えめに空欄のまま表示する
-  // （原因調査用のログはpurchase_service.dart側に出している）。
-  Widget _priceDisplay(AsyncValue<ProductDetails?> productAsync) {
-    return productAsync.when(
-      data: (product) {
-        if (product == null) {
-          return const SizedBox(height: 22);
-        }
-        return Text('${product.price} ／ 年',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22));
-      },
-      loading: () => const SizedBox(
-        height: 24,
-        width: 24,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-      ),
-      error: (error, stackTrace) => const SizedBox(height: 22),
-    );
+  // 自動更新の注記（審査必須）に、App Storeから取得した価格・期間を控えめに1行で
+  // 含める（ハードコードしない）。価格が取得できていない間はエラー文言を出さず、
+  // 注記のみを表示する（原因調査用のログはpurchase_service.dart側に出している）。
+  Widget _autoRenewalNotice(ProductDetails? product) {
+    final text = product != null
+        ? '年額${product.price}（自動更新）。解約はApp Storeの設定からいつでも可能です。'
+        : '自動更新されます。解約はApp Storeの設定からいつでも可能です。';
+    return Text(text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: AppTheme.textMuted, fontSize: 12, height: 1.6));
   }
 
   Widget _legalLink(String label, String url) {
