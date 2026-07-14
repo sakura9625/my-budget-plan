@@ -117,6 +117,9 @@ class CalculationResult {
   final bool hasCurrentMonthReview;
   final double affordBudget;
   final double displayAffordBudget;
+  // 表示用「貯蓄枠」＝現在月がその PJT（純粋貯蓄・プロジェクト）の期間内にあるものだけの、
+  // 必要月額（表示用）の合計。予算枠の隣にメインカードで表示する。計算には使わない。
+  final double displaySavingsFrame;
   final double affordProject;
   final AffordStatus? affordabilityStatus;
   final double totalBalance;
@@ -138,6 +141,7 @@ class CalculationResult {
     required this.hasCurrentMonthReview,
     required this.affordBudget,
     required this.displayAffordBudget,
+    required this.displaySavingsFrame,
     required this.affordProject,
     required this.affordabilityStatus,
     required this.totalBalance,
@@ -427,6 +431,17 @@ CalculationResult calculatePlan({
     if (rawRemaining <= 0) continue;
     affordProject += gc.displayRequiredMonthlyAmount;
   }
+
+  // 表示用「貯蓄枠」＝現在月がその PJT の期間内（開始月≦現在月≦終了月）にあるものだけの、
+  // 必要月額（表示用）の合計。断念・凍結はgoalCalculations（active限定）の時点で
+  // 既に含まれない。達成済みも同様に含まれないが、必要月額が実質0のため影響はない。
+  double displaySavingsFrame = 0;
+  for (final gc in goalCalculations) {
+    if (!gc.hasStarted) continue; // 未来開始のPJTは含めない
+    final endMonthTotal = gc.goal.endYear * 12 + gc.goal.endMonth;
+    if (nowMonthTotal > endMonthTotal) continue; // 終了済みのPJTは含めない
+    displaySavingsFrame += gc.displayRequiredMonthlyAmount;
+  }
   // 原資の健全性判定（①動かせる金で②③（＋④）をまかなえるか）
   final affordabilityStatus = _toAffordabilityStatus(
       movableFunds, affordBudget, affordProject, monthlyFreeAmount);
@@ -492,6 +507,7 @@ CalculationResult calculatePlan({
     hasCurrentMonthReview: hasCurrentMonthReview,
     affordBudget: affordBudget,
     displayAffordBudget: displayAffordBudget,
+    displaySavingsFrame: displaySavingsFrame,
     affordProject: affordProject,
     affordabilityStatus: affordabilityStatus,
     totalBalance: effectiveBalance,

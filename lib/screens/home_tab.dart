@@ -282,8 +282,19 @@ class HomeTab extends ConsumerWidget {
                 _summaryChip(
                     '初期計画時の月間自由枠', Formatter.manDecimal(calc.monthlyFreeAmount)),
                 const SizedBox(height: 8),
-                // 4. 予算枠（表示はマイナス許容。計算に使うcalc.affordBudgetは0クランプのまま）
-                _summaryChip('予算枠', _formatSignedMan(calc.displayAffordBudget)),
+                // 4. 予算枠・貯蓄枠（表示はマイナス許容。計算に使うcalc.affordBudgetは0クランプのまま）
+                // Expandedにせず中身の幅だけを取らせ、左寄せで隣接させる（右側に余白を残す）。
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _summaryChip(
+                        '予算枠', _formatSignedMan(calc.displayAffordBudget)),
+                    const SizedBox(width: 10),
+                    _summaryChip(
+                        '貯蓄枠', _formatSignedMan(calc.displaySavingsFrame)),
+                  ],
+                ),
                 // 5. 計画進捗
                 if (hasGoals) ...[
                   const SizedBox(height: 10),
