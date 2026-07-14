@@ -8,6 +8,7 @@ import '../providers/tab_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 import '../widgets/pig_background_body.dart';
+import 'judgement_help_screen.dart';
 
 // レビュータブのインデックス（MainScreenの_tabs順に対応）。
 const int _reviewTabIndex = 2;
@@ -82,13 +83,42 @@ class HomeTab extends ConsumerWidget {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('攻める家計簿'),
+        actions: [
+          IconButton(
+            icon: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Text('?',
+                  style: TextStyle(
+                      color: AppTheme.navy,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+            ),
+            tooltip: '見方について',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const JudgementHelpScreen(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: PigBackgroundBody(
         pigAsset: 'pig_navy_chair.png',
         children: [
           _buildHeadline(context, ref, showReviewAlert),
           const SizedBox(height: 20),
-          _buildFreeAmountCard(context, calc),
+          _buildPigBubbleSection(calc),
+          const SizedBox(height: 16),
+          _MainMoneyCard(calc: calc),
+          const SizedBox(height: 12),
+          _buildBottomStatsRow(calc),
           const SizedBox(height: 28),
           _buildSectionTitle(context, '年間計画'),
           const SizedBox(height: 10),
@@ -185,244 +215,136 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildFreeAmountCard(BuildContext context, CalculationResult calc) {
-    final hasGoals = calc.goalCalculations.isNotEmpty;
-
-    // カードの実際の描画幅を基準にキャラのサイズを決める。MediaQuery.size.widthは
-    // ウィンドウ/ビューポート全体の幅であり、Web版ではスクロールバー分などの差異で
-    // 実際にカードへ割り当てられる幅と数px〜十数pxずれることがあり、それが右端の
-    // オーバーフローの原因になる。LayoutBuilderでこのカード自身の実測幅を使うことで
-    // 常にレイアウトと矛盾しないサイズにする。
+  // 吹き出し＋顔（キャラのひとこと）。ネイビーの背景上に、金色カード（動かせるお金）
+  // の上段として独立して配置する。
+  Widget _buildPigBubbleSection(CalculationResult calc) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 顔を大きくしすぎると右側の吹き出し用スペース（bubbleWidth）が左のテキスト列を
-        // 圧迫し、金額などが不自然な位置で折り返されるため、テキスト優先で控えめにする。
-        final pigWidth = constraints.maxWidth * 0.44;
-        // pig_common.pngはトリミング済みの正方形素材（769x768）。widthのみ指定し
-        // 高さは元画像の比率で自動計算する。
-        final pigHeight = pigWidth / (769 / 768);
-        // 吹き出し＋顔の右側ブロックがRow内で確保する幅。これがそのまま左テキスト列の
-        // 残り幅を決めるため、中央（0.5）を超えないよう、ちょうど半分に制限する。
-        final bubbleWidth = constraints.maxWidth * 0.5;
-        // 吹き出し＋顔がテキスト列と重ならないよう、テキスト列側にもその分の高さを確保する
-        // （吹き出しの文字数で高さが変わるため、長めのセリフでも2〜3行で収まる想定の概算値）。
-        const bubbleHeightEstimate = 100.0;
-        // 顔をカード下端にべったり付けないための余白（近づけつつ少し余裕を残す）。
-        const pigBottomSpacing = 16.0;
-
-        return _buildFreeAmountCardContent(
-          context,
-          calc,
-          hasGoals,
-          pigWidth,
-          pigHeight,
-          bubbleWidth,
-          bubbleHeightEstimate,
-          pigBottomSpacing,
+        final pigWidth = constraints.maxWidth * 0.32;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildSpeechBubble(calc),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Image.asset(
+              'assets/characters/pig_common.png',
+              width: pigWidth,
+              fit: BoxFit.contain,
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildFreeAmountCardContent(
-    BuildContext context,
-    CalculationResult calc,
-    bool hasGoals,
-    double pigWidth,
-    double pigHeight,
-    double bubbleWidth,
-    double bubbleHeightEstimate,
-    double pigBottomSpacing,
-  ) {
-    return ClipRRect(
-      // 顔をカードの右下角ぴったりまで届かせる（Positionedでカード端に直接配置する）ため、
-      // 角の外に絵がはみ出さないよう、カードの角丸に合わせてクリップする。
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.primaryGradient,
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                // 1. 今月 動かせるお金
-                Text('今月 動かせるお金',
-                    style: TextStyle(
-                        color: AppTheme.navy.withOpacity(0.6), fontSize: 13)),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    Formatter.manDecimal(calc.movableFunds),
-                    style: const TextStyle(
-                      color: AppTheme.navy,
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                // 2. 原資判定バッジ
-                if (calc.affordabilityStatus != null) ...[
-                  const SizedBox(height: 8),
-                  _affordabilityBadge(calc.affordabilityStatus!),
-                ],
-                const SizedBox(height: 10),
-                // 3. 初期計画時の月間自由枠
-                _summaryChip(
-                    '初期計画時の月間自由枠', Formatter.manDecimal(calc.monthlyFreeAmount)),
-                const SizedBox(height: 8),
-                // 4. 予算枠・貯蓄枠（表示はマイナス許容。計算に使うcalc.affordBudgetは0クランプのまま）
-                // Expandedにせず中身の幅だけを取らせ、左寄せで隣接させる（右側に余白を残す）。
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _summaryChip(
-                        '予算枠', _formatSignedMan(calc.displayAffordBudget)),
-                    const SizedBox(width: 10),
-                    _summaryChip(
-                        '貯蓄枠', _formatSignedMan(calc.displaySavingsFrame)),
-                  ],
-                ),
-                // 5. 計画進捗
-                if (hasGoals) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text('計画進捗',
-                          style: TextStyle(
-                              color: AppTheme.navy.withOpacity(0.6),
-                              fontSize: 11)),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${(calc.totalPlanProgress * 100).toStringAsFixed(1)}%',
-                        style: const TextStyle(
-                            color: AppTheme.navy,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ],
-                // 6. 年間自由資金 / 計画を含むと（縦積み。左テキスト列の幅をフルに使う）
-                const SizedBox(height: 10),
-                        _summaryChip(
-                            '年間自由資金', Formatter.man(calc.annualFreeMoney)),
-                        const SizedBox(height: 8),
-                        _summaryChip(
-                            '計画を含むと', Formatter.man(calc.annualFreeAmount)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // 右側は吹き出し＋顔の分だけ幅・高さを確保するプレースホルダー。
-                  // 吹き出しと顔本体はこの下でPositionedとしてまとめて配置するため、
-                  // ここでは左のテキスト列と重ならないためのスペース確保のみ行う。
-                  SizedBox(
-                    width: bubbleWidth,
-                    height: bubbleHeightEstimate + 10 + pigHeight + pigBottomSpacing,
-                  ),
-                ],
-              ),
+  Widget _buildSpeechBubble(CalculationResult calc) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.centerRight,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Text(
+            _pigComment(
+              afford: calc.affordabilityStatus,
+              planStatus: calc.overallPlanStatus,
+              hasGoals: calc.goalCalculations.isNotEmpty,
+              monthlyFreeAmount: calc.monthlyFreeAmount,
+              movableFunds: calc.movableFunds,
             ),
-            // 吹き出し＋顔を「ひとかたまり」として、カード下寄りにまとめて配置する
-            // （中央寄せだと顔の下に余白が空きすぎるため、下寄り＋余白少なめにする）。
-            // 右側にも少し余白を持たせ、吹き出しがカード右端にくっつかないようにする。
-            Positioned(
-              bottom: pigBottomSpacing,
-              right: 14,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildSpeechBubble(calc, bubbleWidth),
-                  const SizedBox(height: 10),
-                  Image.asset(
-                    'assets/characters/pig_common.png',
-                    width: pigWidth,
-                    fit: BoxFit.contain,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+                height: 1.4),
+          ),
         ),
-      ),
+        Positioned(
+          right: -6,
+          child: Transform.rotate(
+            angle: pi / 4,
+            child: Container(width: 12, height: 12, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSpeechBubble(CalculationResult calc, double bubbleWidth) {
-    return SizedBox(
-      width: bubbleWidth,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Text(
-              _pigComment(
-                afford: calc.affordabilityStatus,
-                planStatus: calc.overallPlanStatus,
-                hasGoals: calc.goalCalculations.isNotEmpty,
-                monthlyFreeAmount: calc.monthlyFreeAmount,
-                movableFunds: calc.movableFunds,
-              ),
-              textAlign: TextAlign.center,
+  // 最下段：計画進捗（左）／年間自由資金・計画を見込むと（右）。
+  // Rowを直接ListView内に置くと、cross軸(縦)の制約が無限大になり
+  // CrossAxisAlignment.stretchがBoxConstraints例外を起こすため、
+  // IntrinsicHeightで先に高さを確定させてからstretchする。
+  Widget _buildBottomStatsRow(CalculationResult calc) {
+    return IntrinsicHeight(
+      child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: _statsBox([
+            Text('計画進捗',
+                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+            const SizedBox(height: 6),
+            Text(
+              '${(calc.totalPlanProgress * 100).toStringAsFixed(1)}%',
               style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
-                  height: 1.4),
+                  color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
             ),
-          ),
-          Positioned(
-            bottom: -6,
-            child: Transform.rotate(
-              angle: pi / 4,
-              child: Container(width: 12, height: 12, color: Colors.white),
-            ),
-          ),
-        ],
+          ]),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _statsBox([
+            _statRow('年間自由資金', _manNoYen(calc.annualFreeMoney)),
+            const SizedBox(height: 8),
+            _statRow('計画を見込むと', _manNoYen(calc.annualFreeAmount)),
+          ]),
+        ),
+      ],
       ),
     );
   }
 
-  Widget _affordabilityBadge(AffordStatus status) {
-    final label = AppTheme.affordStatusLabel(status);
-    final color = AppTheme.affordStatusColor(status);
-    final bgColor = AppTheme.affordStatusBgColor(status);
+  Widget _statsBox(List<Widget> children) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.25)),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
+  }
+
+  Widget _statRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // 万円単位（円を付けない簡潔表記）。年間自由資金・計画を見込むとの表示専用。
+  String _manNoYen(double value) {
+    if (value < 0) return '▲${value.abs().round()}万';
+    return '${value.round()}万';
   }
 
   // キャラのひとこと。原資判定(AffordStatus)×計画進捗(_ProgressTier)の組み合わせから引く。
@@ -467,25 +389,6 @@ class HomeTab extends ConsumerWidget {
       case null:
         return _ProgressTier.good;
     }
-  }
-
-  // マイナスのときは「▲◯万円」で表示する（表示専用。計算には使わない）。
-  String _formatSignedMan(double value) {
-    if (value < 0) return '▲${Formatter.man(value.abs())}';
-    return Formatter.man(value);
-  }
-
-  Widget _summaryChip(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: TextStyle(color: AppTheme.navy.withOpacity(0.6), fontSize: 11)),
-        Text(value,
-            style: const TextStyle(
-                color: AppTheme.navy, fontWeight: FontWeight.bold, fontSize: 13)),
-      ],
-    );
   }
 
   Widget _buildBudgetCard(BuildContext context, BudgetCalculation b) {
@@ -829,6 +732,313 @@ class HomeTab extends ConsumerWidget {
         },
       ),
     );
+  }
+}
+
+// 3枠（自由枠・予算枠・貯蓄枠）を▲▼で調整できる「表示だけのシミュレーション」。
+// ここで動かす数値はこのウィジェットのローカルstateのみに閉じており、
+// Provider・保存データ・他の計算には一切書き戻さない。画面を離れて（このWidgetが
+// 破棄されて）戻れば、本来の値から再構築される。
+class _MainMoneyCard extends StatefulWidget {
+  final CalculationResult calc;
+  const _MainMoneyCard({required this.calc});
+
+  @override
+  State<_MainMoneyCard> createState() => _MainMoneyCardState();
+}
+
+enum _FrameKind { free, budget, savings }
+
+class _MainMoneyCardState extends State<_MainMoneyCard> {
+  // 表示専用の調整値（万円単位）。本来の値はwidget.calcから毎回読み、
+  // ここにはズレ（シミュレーション中の値）だけを保持する。
+  late double _free;
+  late double _budget;
+  late double _savings;
+
+  // 直近にstateを組み立てた際の本来値（実データ由来）。これが変わったら
+  // ＝実データが変わったとみなし、シミュレーションを本来の値に作り直す。
+  late double _baseMovable;
+  late double _baseBudget;
+  late double _baseSavings;
+
+  @override
+  void initState() {
+    super.initState();
+    _resetToBaseline(widget.calc);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MainMoneyCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.calc.movableFunds != _baseMovable ||
+        widget.calc.displayAffordBudget != _baseBudget ||
+        widget.calc.displaySavingsFrame != _baseSavings) {
+      _resetToBaseline(widget.calc);
+    }
+  }
+
+  void _resetToBaseline(CalculationResult calc) {
+    _baseMovable = calc.movableFunds;
+    _baseBudget = calc.displayAffordBudget;
+    _baseSavings = calc.displaySavingsFrame;
+    _budget = _baseBudget;
+    _savings = _baseSavings;
+    _free = _baseMovable - _baseBudget - _baseSavings;
+  }
+
+  bool get _isAdjusted =>
+      _budget != _baseBudget ||
+      _savings != _baseSavings ||
+      _free != (_baseMovable - _baseBudget - _baseSavings);
+
+  // ▲▼のルール：3枠の合計は常に「今月動かせるお金」を維持する。
+  // 1枠を1万動かすと、残り2枠が0.5万ずつ逆方向に動く。予算枠・貯蓄枠は
+  // 0未満にできず、そこで止まった分は自由枠（マイナス可）が引き受ける。
+  void _press(_FrameKind target, double sign) {
+    setState(() {
+      const step = 1.0;
+      const half = 0.5;
+      final increasing = sign > 0;
+
+      switch (target) {
+        case _FrameKind.free:
+          if (increasing) {
+            final bDec = _budget < half ? _budget : half;
+            final sDec = _savings < half ? _savings : half;
+            _free += bDec + sDec;
+            _budget -= bDec;
+            _savings -= sDec;
+          } else {
+            _free -= step;
+            _budget += half;
+            _savings += half;
+          }
+          break;
+        case _FrameKind.budget:
+          if (increasing) {
+            final sDec = _savings < half ? _savings : half;
+            final shortfall = half - sDec;
+            _savings -= sDec;
+            _free -= half + shortfall;
+            _budget += step;
+          } else {
+            final bDec = _budget < step ? _budget : step;
+            _budget -= bDec;
+            final each = bDec / 2;
+            _free += each;
+            _savings += each;
+          }
+          break;
+        case _FrameKind.savings:
+          if (increasing) {
+            final bDec = _budget < half ? _budget : half;
+            final shortfall = half - bDec;
+            _budget -= bDec;
+            _free -= half + shortfall;
+            _savings += step;
+          } else {
+            final sDec = _savings < step ? _savings : step;
+            _savings -= sDec;
+            final each = sDec / 2;
+            _free += each;
+            _budget += each;
+          }
+          break;
+      }
+    });
+  }
+
+  void _reset() {
+    setState(() {
+      _budget = _baseBudget;
+      _savings = _baseSavings;
+      _free = _baseMovable - _baseBudget - _baseSavings;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final calc = widget.calc;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      Formatter.manDecimal(calc.movableFunds),
+                      style: const TextStyle(
+                          color: AppTheme.navy,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('が今月 動かせるお金',
+                        style: TextStyle(
+                            color: AppTheme.navy.withOpacity(0.7),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                if (_isAdjusted)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, color: AppTheme.navy, size: 20),
+                      tooltip: '本来の値に戻す',
+                      onPressed: _reset,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+              ],
+            ),
+            if (calc.affordabilityStatus != null) ...[
+              const SizedBox(height: 8),
+              _affordabilityBadge(calc.affordabilityStatus!),
+            ],
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _frameColumn(
+                      label: '自由枠', baseValue: null, value: _free, kind: _FrameKind.free),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _frameColumn(
+                      label: '予算枠',
+                      baseValue: _baseBudget,
+                      value: _budget,
+                      kind: _FrameKind.budget),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _frameColumn(
+                      label: '貯蓄枠',
+                      baseValue: _baseSavings,
+                      value: _savings,
+                      kind: _FrameKind.savings),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _frameColumn({
+    required String label,
+    required double? baseValue,
+    required double value,
+    required _FrameKind kind,
+  }) {
+    final labelText =
+        baseValue == null ? label : '$label：${_frameAmountText(baseValue)}';
+    final isNegative = value < -0.001;
+    final canDecrease = kind == _FrameKind.free || value > 0.001;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(labelText,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                color: AppTheme.navy.withOpacity(0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(10)),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(_frameAmountText(value),
+                style: TextStyle(
+                    color: isNegative ? AppTheme.danger : AppTheme.navy,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _stepButton(Icons.arrow_drop_up, () => _press(kind, 1)),
+            const SizedBox(width: 4),
+            _stepButton(
+                Icons.arrow_drop_down, canDecrease ? () => _press(kind, -1) : null),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _stepButton(IconData icon, VoidCallback? onPressed) {
+    final enabled = onPressed != null;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 30,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: enabled ? Colors.white : Colors.white.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon,
+            color: AppTheme.navy.withOpacity(enabled ? 1 : 0.4), size: 22),
+      ),
+    );
+  }
+
+  // 本体（原資判定バッジ）と同じ見た目にするため、AppThemeのヘルパーをそのまま使う。
+  Widget _affordabilityBadge(AffordStatus status) {
+    final label = AppTheme.affordStatusLabel(status);
+    final color = AppTheme.affordStatusColor(status);
+    final bgColor = AppTheme.affordStatusBgColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
+  // 0.5万刻みの調整値を表示用文字列にする（浮動小数の誤差は0.5万グリッドへのスナップで吸収）。
+  // マイナスは本アプリの慣例に合わせ「▲」で表す。
+  String _frameAmountText(double value) {
+    final snapped = (value * 2).round() / 2;
+    final isNegative = snapped < -0.001;
+    final absVal = snapped.abs();
+    final isWhole = (absVal - absVal.roundToDouble()).abs() < 0.001;
+    final text = isWhole ? '${absVal.round()}万' : '${absVal.toStringAsFixed(1)}万';
+    return isNegative ? '▲$text' : text;
   }
 }
 
