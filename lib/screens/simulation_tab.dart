@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/simulation.dart';
+import '../providers/premium_provider.dart';
 import '../providers/simulation_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 import '../widgets/pig_background_body.dart';
 import 'simulation_condition_type_screen.dart';
+import 'simulation_paywall_screen.dart';
 import 'simulation_result_screen.dart';
 
 // 未来シミュレーション トップ画面。
 // 「現在のデータを変えずに、計画を変更した場合の影響を確認する」機能の入口。
-// この段階では条件の追加・一覧・削除の器と画面遷移のみで、実際の再計算は行わない。
+// 未購入ユーザーにはペイウォール（SimulationPaywallScreen）を表示する。
+// premiumStatusProviderがtrueに変わった瞬間（購入・復元完了時）にこのbuildが
+// 再実行され、自動的に通常画面へ切り替わる（明示的な画面遷移は行わない）。
 class SimulationTab extends ConsumerWidget {
   const SimulationTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPremium = ref.watch(premiumStatusProvider);
+    if (!isPremium) {
+      return const SimulationPaywallScreen();
+    }
+
     final conditions = ref.watch(simulationConditionsProvider);
 
     return Scaffold(

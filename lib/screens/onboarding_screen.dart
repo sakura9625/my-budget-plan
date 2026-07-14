@@ -258,8 +258,15 @@ class _Page3 extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          Text('今月、あといくら使えるか\nが分かります',
-              style: Theme.of(context).textTheme.displayLarge),
+          // 「使えるかが分かります」を意味の途中で改行させないため、1行のまま
+          // 画面幅に収まるようFittedBoxでフォントサイズを自動縮小する。
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text('今月、あといくら使えるかが分かります',
+                maxLines: 1,
+                style: Theme.of(context).textTheme.displayLarge),
+          ),
           const SizedBox(height: 16),
           Text(
             '今月は余裕があるのか。\n少し自粛した方がいいのか。\nホームを見れば、すぐに分かります。',

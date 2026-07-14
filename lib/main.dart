@@ -10,6 +10,7 @@ import 'models/review.dart';
 import 'router.dart';
 import 'theme.dart';
 import 'services/notification_service.dart';
+import 'services/purchase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,7 @@ void main() async {
   await Hive.openBox<BudgetEntry>('budget_entries');
   await Hive.openBox<AppSettings>('settings');
   await Hive.openBox<Review>('reviews');
+  await Hive.openBox<bool>('premium_status');
 
   try {
     await NotificationService.init();
@@ -46,7 +48,20 @@ void main() async {
     debugPrint('Notification init error: $e');
   }
 
-  runApp(const ProviderScope(child: MyApp()));
+  // in_app_purchaseの推奨に従い、アプリ起動後すぐ（MainAppを返す前）に
+  // purchaseStreamを購読する。ProviderContainerを先に作ることで、
+  // ウィジェットツリーの構築を待たずに購読を開始できる。
+  final container = ProviderContainer();
+  container.read(purchaseServiceProvider);
+  // 過去の購入状態（他端末・再インストール後など）をアプリ起動時に確認して反映する。
+  container.read(purchaseRestoreProvider);
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
