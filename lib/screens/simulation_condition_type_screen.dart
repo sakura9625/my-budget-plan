@@ -14,8 +14,8 @@ class SimulationConditionTypeScreen extends StatelessWidget {
 
   static const _options = [
     (type: SimulationType.addGoal, emoji: '🎯', label: '新しいプロジェクトを追加'),
-    (type: SimulationType.editGoal, emoji: '✏️', label: '既存プロジェクトを変更'),
-    (type: SimulationType.editBudget, emoji: '💰', label: '予算月額を変更'),
+    (type: SimulationType.editGoal, emoji: '✏️', label: '既存プロジェクトを変更もしくは削除'),
+    (type: SimulationType.editBudget, emoji: '💰', label: '予算月額を変更もしくは削除'),
     (type: SimulationType.reduceBalance, emoji: '🛍️', label: '大きな買い物をする'),
     (type: SimulationType.changeGoalStatus, emoji: '💀', label: 'プロジェクトを断念'),
     (type: SimulationType.changeFixedCost, emoji: '🏠', label: '固定費を変更'),

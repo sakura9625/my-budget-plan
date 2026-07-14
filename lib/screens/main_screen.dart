@@ -52,7 +52,7 @@ class MainScreen extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights, color: AppTheme.primary),
-            label: 'シミュレーション',
+            label: '未来シミュ',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

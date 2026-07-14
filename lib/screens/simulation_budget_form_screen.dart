@@ -27,6 +27,7 @@ class _SimulationBudgetFormScreenState
   late int _startMonth = widget.budget.startMonth;
   late int _endYear = widget.budget.endYear;
   late int _endMonth = widget.budget.endMonth;
+  bool _isDelete = false;
   String? _error;
 
   @override
@@ -45,46 +46,76 @@ class _SimulationBudgetFormScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('名前',
-                style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
-            const SizedBox(height: 8),
-            TextField(controller: _nameController),
-            const SizedBox(height: 20),
-            const Text('月額予算（万円）',
-                style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(suffixText: '万円/月'),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('この予算を削除する',
+                    style: TextStyle(
+                        color: AppTheme.textDark, fontWeight: FontWeight.bold)),
+                subtitle: const Text(
+                    'シミュレーション上でこの予算自体を無かったことにします（本丸データは変更しません）。',
+                    style: TextStyle(fontSize: 12)),
+                value: _isDelete,
+                onChanged: (v) => setState(() => _isDelete = v),
+              ),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: MonthPicker(
-                    label: '開始',
-                    year: _startYear,
-                    month: _startMonth,
-                    onChanged: (y, m) => setState(() {
-                      _startYear = y;
-                      _startMonth = m;
-                    }),
-                  ),
+            AbsorbPointer(
+              absorbing: _isDelete,
+              child: Opacity(
+                opacity: _isDelete ? 0.4 : 1.0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('名前',
+                        style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    TextField(controller: _nameController),
+                    const SizedBox(height: 20),
+                    const Text('月額予算（万円）',
+                        style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(suffixText: '万円/月'),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MonthPicker(
+                            label: '開始',
+                            year: _startYear,
+                            month: _startMonth,
+                            onChanged: (y, m) => setState(() {
+                              _startYear = y;
+                              _startMonth = m;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: MonthPicker(
+                            label: '終了',
+                            year: _endYear,
+                            month: _endMonth,
+                            onChanged: (y, m) => setState(() {
+                              _endYear = y;
+                              _endMonth = m;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: MonthPicker(
-                    label: '終了',
-                    year: _endYear,
-                    month: _endMonth,
-                    onChanged: (y, m) => setState(() {
-                      _endYear = y;
-                      _endMonth = m;
-                    }),
-                  ),
-                ),
-              ],
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
@@ -94,7 +125,7 @@ class _SimulationBudgetFormScreenState
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: _submit,
-              child: const Text('登録'),
+              child: Text(_isDelete ? '削除として登録' : '登録'),
             ),
           ],
         ),
@@ -103,6 +134,24 @@ class _SimulationBudgetFormScreenState
   }
 
   void _submit() {
+    if (_isDelete) {
+      ref.read(simulationConditionsProvider.notifier).add(
+            EditBudgetCondition(
+              id: const Uuid().v4(),
+              budgetId: widget.budget.id,
+              name: widget.budget.name,
+              monthlyAmount: widget.budget.monthlyAmount,
+              startYear: widget.budget.startYear,
+              startMonth: widget.budget.startMonth,
+              endYear: widget.budget.endYear,
+              endMonth: widget.budget.endMonth,
+              isDelete: true,
+            ),
+          );
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+
     final name = _nameController.text.trim();
     final amount = double.tryParse(_amountController.text);
     final startTotal = _startYear * 12 + _startMonth;

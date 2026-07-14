@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/simulation.dart';
 import '../providers/budget_provider.dart';
 import '../providers/calculation_provider.dart';
 import '../providers/goal_provider.dart';
@@ -7,6 +8,7 @@ import '../providers/review_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/simulation_engine.dart';
 import '../providers/simulation_provider.dart';
+import '../providers/tab_provider.dart';
 import '../theme.dart';
 import '../utils/formatter.dart';
 
@@ -57,6 +59,12 @@ class SimulationResultScreen extends ConsumerWidget {
       ...before.goalCalculations.map((gc) => gc.goal.id),
       ...afterById.keys.where((id) => !beforeById.containsKey(id)),
     ];
+    // 「削除」（配列から除外）と「断念」（ステータス変更）はafterGc==nullの見た目が
+    // 同じになるため、判定バッジを出し分けるために削除対象のgoalIdを別途持っておく。
+    final deletedGoalIds = {
+      for (final c in conditions.whereType<EditGoalCondition>())
+        if (c.isDelete) c.goalId,
+    };
 
     return Scaffold(
       appBar: AppBar(title: const Text('シミュレーション結果')),
@@ -121,7 +129,8 @@ class SimulationResultScreen extends ConsumerWidget {
                 else
                   ...orderedIds.map((id) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _goalCard(beforeById[id], afterById[id]),
+                        child: _goalCard(beforeById[id], afterById[id],
+                            isDeleted: deletedGoalIds.contains(id)),
                       )),
                 const SizedBox(height: 12),
                 OutlinedButton(
@@ -132,11 +141,7 @@ class SimulationResultScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('この機能は次のステップで実装します。')),
-                    );
-                  },
+                  onPressed: () => _confirmApply(context, ref, conditions),
                   child: const Text('現在の計画へ反映'),
                 ),
               ],
@@ -145,6 +150,90 @@ class SimulationResultScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static void _confirmApply(
+      BuildContext context, WidgetRef ref, List<SimulationCondition> conditions) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppTheme.danger, width: 1.5),
+        ),
+        title: const Text('現在の計画へ反映',
+            style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+        content: const Text(
+            'このシミュレーション内容を現在の計画へ反映しますか？\n'
+            '反映後は、プロジェクト・予算・固定費などの設定が更新されます。',
+            style: TextStyle(color: AppTheme.danger)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('キャンセル', style: TextStyle(color: AppTheme.navy)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _applyAndGoHome(context, ref, conditions);
+            },
+            child: const Text('反映する',
+                style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _applyAndGoHome(
+      BuildContext context, WidgetRef ref, List<SimulationCondition> conditions) async {
+    // 残高減額（買い物）は反映対象外。1件以上含まれる場合は反映後にポップアップで案内する。
+    final hasReduceBalance =
+        conditions.whereType<ReduceBalanceCondition>().isNotEmpty;
+
+    await applySimulationToRealData(
+      conditions,
+      currentSettings: ref.read(settingsProvider),
+      currentGoals: ref.read(goalProvider),
+      currentBudgets: ref.read(budgetProvider),
+      settingsNotifier: ref.read(settingsProvider.notifier),
+      goalNotifier: ref.read(goalProvider.notifier),
+      budgetNotifier: ref.read(budgetProvider.notifier),
+    );
+    ref.read(simulationConditionsProvider.notifier).clear();
+
+    if (!context.mounted) return;
+    ref.read(mainTabIndexProvider.notifier).state = 0;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('計画へ反映しました。')),
+    );
+
+    if (hasReduceBalance) {
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.danger, width: 1.5),
+          ),
+          content: const Text(
+            '買い物は実際のご購入後、次回レビュー時に反映してください。',
+            style: TextStyle(color: AppTheme.danger),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK', style: TextStyle(color: AppTheme.danger)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   static Widget _headerPill(String label, Color bg, Color fg) {
@@ -234,7 +323,8 @@ class SimulationResultScreen extends ConsumerWidget {
     );
   }
 
-  static Widget _goalCard(GoalCalculation? beforeGc, GoalCalculation? afterGc) {
+  static Widget _goalCard(GoalCalculation? beforeGc, GoalCalculation? afterGc,
+      {required bool isDeleted}) {
     final name = (afterGc ?? beforeGc)!.goal.name;
     final beforeValue = beforeGc == null
         ? '－'
@@ -256,12 +346,14 @@ class SimulationResultScreen extends ConsumerWidget {
             style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
       );
     } else {
+      // 削除（配列から除外）と断念（ステータス変更）はここでは同じ「afterGc==null」に
+      // なるため、削除対象なら別のラベルで区別する。
       badge = Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration:
             BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(20)),
-        child: const Text('断念',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
+        child: Text(isDeleted ? '削除' : '断念',
+            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
       );
     }
 
@@ -299,65 +391,69 @@ class _CompareCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: Stack(
         children: [
-          Positioned.fill(
+          // 背景：左右2分割の実コンテナ（Positioned.fillに頼らず、Rowの高さで
+          // カード自体の高さを決める。IntrinsicHeightで左右の高さを揃える）。
+          IntrinsicHeight(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                    child: ColoredBox(
-                        color: SimulationResultScreen._cardLeftFill)),
-                const Expanded(child: ColoredBox(color: Colors.white)),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: AppTheme.textDark,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Center(
-                        child: Text(beforeValue,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: beforeValueColor ?? AppTheme.textDark,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
-                      ),
+                  child: Container(
+                    color: SimulationResultScreen._cardLeftFill,
+                    // top側は重ねて表示するtitle分のスペースを確保する
+                    padding: const EdgeInsets.only(
+                        top: 38, bottom: 12, left: 8, right: 8),
+                    child: Center(
+                      child: Text(beforeValue,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: beforeValueColor ?? AppTheme.textDark,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
                     ),
-                    if (centerBadge != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: centerBadge,
-                      )
-                    else
-                      const SizedBox(width: 8),
-                    Expanded(
-                      child: Center(
-                        child: Text(afterValue,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: afterValueColor ?? AppTheme.textDark,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
-                      ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    // top側は重ねて表示するtitle分のスペースを確保する
+                    padding: const EdgeInsets.only(
+                        top: 38, bottom: 12, left: 8, right: 8),
+                    child: Center(
+                      child: Text(afterValue,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: afterValueColor ?? AppTheme.textDark,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
+          // 前景：項目名（上部中央）と中央の差分/判定バッジ（左右境目あたり中央）。
+          Positioned(
+            top: 12,
+            left: 0,
+            right: 0,
+            child: Text(title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppTheme.textDark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13)),
+          ),
+          if (centerBadge != null)
+            Positioned.fill(
+              top: 38,
+              child: Align(
+                alignment: Alignment.center,
+                child: centerBadge,
+              ),
+            ),
         ],
       ),
     );

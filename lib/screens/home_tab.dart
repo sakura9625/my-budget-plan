@@ -264,7 +264,7 @@ class HomeTab extends ConsumerWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    Formatter.man(calc.movableFunds),
+                    Formatter.manDecimal(calc.movableFunds),
                     style: const TextStyle(
                       color: AppTheme.navy,
                       fontSize: 34,
@@ -280,7 +280,7 @@ class HomeTab extends ConsumerWidget {
                 const SizedBox(height: 10),
                 // 3. 初期計画時の月間自由枠
                 _summaryChip(
-                    '初期計画時の月間自由枠', Formatter.man(calc.monthlyFreeAmount)),
+                    '初期計画時の月間自由枠', Formatter.manDecimal(calc.monthlyFreeAmount)),
                 const SizedBox(height: 8),
                 // 4. 予算枠（表示はマイナス許容。計算に使うcalc.affordBudgetは0クランプのまま）
                 _summaryChip('予算枠', _formatSignedMan(calc.displayAffordBudget)),

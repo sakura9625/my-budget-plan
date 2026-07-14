@@ -268,13 +268,17 @@ CalculationResult calculatePlan({
 
   // ②予算月額の合計（原資判定・PJT配分ポットの両方で使う。期間終了済みの予算は除外）
   double affordBudget = 0;
-  // 表示用「予算枠」＝affordBudgetのクランプなし版（マイナス許容）。計算には使わない。
+  // 表示用「予算枠」＝現在月がその予算の期間内（開始月≦現在月≦終了月）にあるものだけの合計。
+  // affordBudgetのクランプなし版（マイナス許容）。計算には使わない。
   double displayAffordBudget = 0;
   for (final bc in budgetCalculations) {
     final rawRemaining =
         (bc.budget.endYear * 12 + bc.budget.endMonth) - nowMonthTotal + 1;
     if (rawRemaining <= 0) continue; // 期間終了済みの予算は除外
     affordBudget += bc.currentMonthlyAmount;
+    final budgetStartMonthTotal =
+        bc.budget.startYear * 12 + bc.budget.startMonth;
+    if (nowMonthTotal < budgetStartMonthTotal) continue; // 未来開始の予算は表示から除外
     displayAffordBudget += bc.displayCurrentMonthlyAmount;
   }
 

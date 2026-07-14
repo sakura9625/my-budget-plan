@@ -82,7 +82,7 @@ class SimulationTab extends ConsumerWidget {
                       ),
                     );
                   },
-            child: const Text('計算する'),
+            child: const Text('未来をシミュレーション'),
           ),
         ],
       ),
@@ -99,9 +99,11 @@ class _ConditionCard extends ConsumerWidget {
       case AddGoalCondition c:
         return '${c.name}を追加 ${Formatter.man(c.targetAmount)}';
       case EditGoalCondition c:
-        return '${c.name}に変更';
+        return c.isDelete ? '${c.name} 削除' : '${c.name}に変更';
       case EditBudgetCondition c:
-        return '${c.name} 月額${Formatter.man(c.monthlyAmount)}に変更';
+        return c.isDelete
+            ? '${c.name} 削除'
+            : '${c.name} 月額${Formatter.man(c.monthlyAmount)}に変更';
       case ReduceBalanceCondition c:
         return '${c.purchaseName} ${Formatter.man(c.amount)}';
       case ChangeGoalStatusCondition c:

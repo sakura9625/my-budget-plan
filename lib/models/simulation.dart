@@ -48,9 +48,12 @@ class AddGoalCondition extends SimulationCondition {
   SimulationType get type => SimulationType.addGoal;
 }
 
-// 既存プロジェクトを変更。種別(GoalType)は変更対象外なので持たない：適用時は
-// 対象Goalの元の種別をそのまま引き継ぐ。それ以外のフィールドは編集後の値をそのまま持つ
-// （フォームは常に現在値をプリフィルして丸ごと編集する方式のため、差分ではなく新しい値）。
+// 既存プロジェクトを変更、もしくは削除。種別(GoalType)は変更対象外なので持たない：
+// 適用時は対象Goalの元の種別をそのまま引き継ぐ。それ以外のフィールドは編集後の値を
+// そのまま持つ（フォームは常に現在値をプリフィルして丸ごと編集する方式のため、
+// 差分ではなく新しい値）。isDeleteがtrueの場合、他フィールドは無視され、
+// 適用時はgoals配列から対象を除外する（断念とは別物：断念は年間計算に残すが、
+// 削除はプロジェクト自体を無かったことにする）。
 class EditGoalCondition extends SimulationCondition {
   final String goalId;
   final String name;
@@ -61,6 +64,7 @@ class EditGoalCondition extends SimulationCondition {
   final int endMonth;
   final String? emoji;
   final String? memo;
+  final bool isDelete;
 
   const EditGoalCondition({
     required super.id,
@@ -73,14 +77,16 @@ class EditGoalCondition extends SimulationCondition {
     required this.endMonth,
     this.emoji,
     this.memo,
+    this.isDelete = false,
   });
 
   @override
   SimulationType get type => SimulationType.editGoal;
 }
 
-// 予算月額を変更。フォームは常に現在値をプリフィルして丸ごと編集する方式のため、
-// 差分ではなく編集後の値をそのまま持つ（EditGoalConditionと同じ考え方）。
+// 予算月額を変更、もしくは削除。フォームは常に現在値をプリフィルして丸ごと編集する
+// 方式のため、差分ではなく編集後の値をそのまま持つ（EditGoalConditionと同じ考え方）。
+// isDeleteがtrueの場合、他フィールドは無視され、適用時はbudgets配列から対象を除外する。
 class EditBudgetCondition extends SimulationCondition {
   final String budgetId;
   final String name;
@@ -89,6 +95,7 @@ class EditBudgetCondition extends SimulationCondition {
   final int startMonth;
   final int endYear;
   final int endMonth;
+  final bool isDelete;
 
   const EditBudgetCondition({
     required super.id,
@@ -99,6 +106,7 @@ class EditBudgetCondition extends SimulationCondition {
     required this.startMonth,
     required this.endYear,
     required this.endMonth,
+    this.isDelete = false,
   });
 
   @override

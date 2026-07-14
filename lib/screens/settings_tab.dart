@@ -48,12 +48,21 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // 他画面（レビュー）でtotalBalanceが更新された場合も表示を同期する
+    // 他画面（レビュー・未来シミュレーションの反映）でsettingsが更新された場合も
+    // 表示を同期する（このタブが表示されたまま外部から更新されるケースがあるため）。
     ref.listen<AppSettings?>(settingsProvider, (previous, next) {
       if (next == null) return;
-      final text = next.totalBalance.toStringAsFixed(0);
-      if (_totalBalanceController.text != text) {
-        _totalBalanceController.text = text;
+      final balanceText = next.totalBalance.toStringAsFixed(0);
+      if (_totalBalanceController.text != balanceText) {
+        _totalBalanceController.text = balanceText;
+      }
+      final incomeText = next.annualIncome.toStringAsFixed(0);
+      if (_incomeController.text != incomeText) {
+        _incomeController.text = incomeText;
+      }
+      final fixedCostText = next.annualFixedCost.toStringAsFixed(0);
+      if (_fixedCostController.text != fixedCostText) {
+        _fixedCostController.text = fixedCostText;
       }
     });
 

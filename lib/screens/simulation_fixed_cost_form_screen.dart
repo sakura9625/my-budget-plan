@@ -22,6 +22,16 @@ class _SimulationFixedCostFormScreenState
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    // 現在の年間固定費を初期値としてプリフィルする（空欄スタートにしない）。
+    final currentFixedCost = ref.read(settingsProvider)?.annualFixedCost;
+    if (currentFixedCost != null) {
+      _amountController.text = currentFixedCost.toStringAsFixed(0);
+    }
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     super.dispose();
