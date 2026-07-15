@@ -113,10 +113,8 @@ class HomeTab extends ConsumerWidget {
         pigAsset: 'pig_navy_chair.png',
         children: [
           _buildHeadline(context, ref, showReviewAlert),
-          const SizedBox(height: 20),
-          _buildPigBubbleSection(calc),
-          const SizedBox(height: 16),
-          _MainMoneyCard(calc: calc),
+          const SizedBox(height: 4),
+          _buildPigAndMoneyCard(calc),
           const SizedBox(height: 12),
           _buildBottomStatsRow(calc),
           const SizedBox(height: 28),
@@ -215,30 +213,63 @@ class HomeTab extends ConsumerWidget {
     );
   }
 
-  // 吹き出し＋顔（キャラのひとこと）。ネイビーの背景上に、金色カード（動かせるお金）
-  // の上段として独立して配置する。
-  Widget _buildPigBubbleSection(CalculationResult calc) {
+  // 吹き出し＋顔（キャラのひとこと）と金色カード（動かせるお金）をまとめて1つの
+  // Stackで組む。ブタ画像を金カードより前面のレイヤーに描画するため、行内では
+  // レイアウト用の透明なブタ（余白確保だけ）を置き、実際に見えるブタ画像は
+  // Stackの最後（＝最前面）にPositionedで重ねて描く。
+  Widget _buildPigAndMoneyCard(CalculationResult calc) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final pigWidth = constraints.maxWidth * 0.32;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        return Stack(
+          clipBehavior: Clip.none,
           children: [
-            Flexible(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _buildSpeechBubble(calc),
-              ),
+            Column(
+              children: [
+                _buildPigBubbleRow(calc, pigWidth),
+                const SizedBox(height: 4),
+                _MainMoneyCard(calc: calc),
+              ],
             ),
-            const SizedBox(width: 12),
-            Image.asset(
-              'assets/characters/pig_common.png',
-              width: pigWidth,
-              fit: BoxFit.contain,
+            Positioned(
+              top: 24,
+              right: 0,
+              child: IgnorePointer(
+                child: Image.asset(
+                  'assets/characters/pig_common.png',
+                  width: pigWidth,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPigBubbleRow(CalculationResult calc, double pigWidth) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _buildSpeechBubble(calc),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // 実際に見えるブタ画像はStack最前面のPositionedが担うため、ここでは
+        // レイアウト上の高さ・幅だけを確保する透明なプレースホルダーにする。
+        Opacity(
+          opacity: 0,
+          child: Image.asset(
+            'assets/characters/pig_common.png',
+            width: pigWidth,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ],
     );
   }
 
@@ -895,22 +926,20 @@ class _MainMoneyCardState extends State<_MainMoneyCard> {
                             fontWeight: FontWeight.bold)),
                   ),
                 ),
-                if (_isAdjusted)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: IconButton(
-                      icon: const Icon(Icons.refresh, color: AppTheme.navy, size: 20),
-                      tooltip: '本来の値に戻す',
-                      onPressed: _reset,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ),
               ],
             ),
-            if (calc.affordabilityStatus != null) ...[
+            if (calc.affordabilityStatus != null || _isAdjusted) ...[
               const SizedBox(height: 8),
-              _affordabilityBadge(calc.affordabilityStatus!),
+              Row(
+                children: [
+                  if (calc.affordabilityStatus != null)
+                    _affordabilityBadge(calc.affordabilityStatus!),
+                  if (_isAdjusted) ...[
+                    const SizedBox(width: 8),
+                    _resetButton(),
+                  ],
+                ],
+              ),
             ],
             const SizedBox(height: 14),
             Row(
@@ -1004,11 +1033,11 @@ class _MainMoneyCardState extends State<_MainMoneyCard> {
         height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? Colors.white : Colors.white.withOpacity(0.4),
+          color: enabled ? AppTheme.navy : const Color(0xFFE0E0E0),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon,
-            color: AppTheme.navy.withOpacity(enabled ? 1 : 0.4), size: 22),
+            color: enabled ? Colors.white : const Color(0xFFAAAAAA), size: 22),
       ),
     );
   }
@@ -1027,6 +1056,17 @@ class _MainMoneyCardState extends State<_MainMoneyCard> {
       child: Text(label,
           style: TextStyle(
               color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+    );
+  }
+
+  // 3枠を本来の値に戻すボタン。原資判定バッジの右隣に並べて表示する。
+  Widget _resetButton() {
+    return IconButton(
+      icon: const Icon(Icons.refresh, color: AppTheme.navy, size: 20),
+      tooltip: '本来の値に戻す',
+      onPressed: _reset,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
     );
   }
 
